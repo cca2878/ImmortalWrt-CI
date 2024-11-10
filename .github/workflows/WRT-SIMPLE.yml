@@ -48,15 +48,13 @@ jobs:
     steps:
       - name: Machine Information
         run: |
-          cd ./wrt/
-
-          echo "======================="
+          echo "======Machine=Info======"
           lscpu | grep -E "name|Core|Thread"
-          echo "======================="
+          echo "========================"
           df -h
-          echo "======================="
+          echo "========================"
           du -h --max-depth=1
-          echo "======================="
+          echo "========================"
 
       - name: Checkout Projects
         uses: actions/checkout@main
