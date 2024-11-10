@@ -46,6 +46,18 @@ jobs:
     name: SIMPLE_${{inputs.WRT_REPO}}_${{inputs.WRT_TARGET}}
     runs-on: ubuntu-22.04
     steps:
+      - name: Machine Information
+        run: |
+          cd ./wrt/
+
+          echo "======================="
+          lscpu | grep -E "name|Core|Thread"
+          echo "======================="
+          df -h
+          echo "======================="
+          du -h --max-depth=1
+          echo "======================="
+
       - name: Checkout Projects
         uses: actions/checkout@main
 
@@ -180,18 +192,6 @@ jobs:
           cd ./wrt/
 
           make -j$(nproc) V=w || make -j1 V=sc
-
-      - name: Machine Information
-        run: |
-          cd ./wrt/
-
-          echo "======================="
-          lscpu | grep -E "name|Core|Thread"
-          echo "======================="
-          df -h
-          echo "======================="
-          du -h --max-depth=1
-          echo "======================="
 
       - name: Package Firmware
         run: |
