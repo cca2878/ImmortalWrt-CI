@@ -107,7 +107,7 @@ jobs:
 
       - name: Check Caches
         id: check-cache
-        if: ${{ env.WRT_TEST != 'true' || env.WRT_CACHE == 'true' }}
+        if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
         uses: actions/cache@main
         with:
           key: ${{env.WRT_TARGET}}-${{env.WRT_VER}}-${{env.WRT_HASH}}
@@ -117,7 +117,7 @@ jobs:
             ./wrt/staging_dir/tool*
 
       - name: Update Caches
-        if: ${{ env.WRT_TEST != 'true' || env.WRT_CACHE == 'true' }}
+        if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
         run: |
           if ${{steps.check-cache.outputs.cache-hit == 'true'}}; then
             sed -i 's/ $(tool.*\/stamp-compile)//g' ./wrt/Makefile
