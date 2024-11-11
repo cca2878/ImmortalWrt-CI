@@ -35,7 +35,7 @@ env:
   WRT_WIFI: Not Impl
   WRT_IP: Not Impl
   WRT_PW: Not Impl
-  WRT_REPO: https://github.com/${{inputs.WRT_REPO}}.git
+  WRT_REPO: https://github.com/${{inputs.WRT_REPO}}
   WRT_BRANCH: ${{inputs.WRT_BRANCH}}
   WRT_PACKAGE: Not Impl
   WRT_TEST: ${{inputs.WRT_TEST}}
@@ -99,9 +99,7 @@ jobs:
           export WRT_CI=$(basename $GITHUB_WORKSPACE)
           export WRT_VER=$(echo $WRT_REPO | cut -d '/' -f 5-)-$WRT_BRANCH
           export WRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" $GITHUB_WORKSPACE/Simple/Config/$WRT_TARGET.txt)
-          export WRT_PACKNAME=Fw_"$WRT_TARGET"_"$WRT_VER"_"$WRT_DATE".zip
           
-          echo "WRT_PACKNAME=$WRT_PACKNAME" >> $GITHUB_ENV
           echo "WRT_DATE=$WRT_DATE" >> $GITHUB_ENV
           echo "WRT_CI=$WRT_CI" >> $GITHUB_ENV
           echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
@@ -217,6 +215,6 @@ jobs:
       - name: Upload Firmware
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.WRT_PACKNAME }}
+          name: Fw_${{env.WRT_TARGET}}_${{env.WRT_VER}}_${{env.WRT_DATE}}
           path: ./wrt/upload/*
           if-no-files-found: error
