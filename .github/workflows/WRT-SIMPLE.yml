@@ -212,7 +212,7 @@ jobs:
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
 
             export WRT_PACKNAME=Fw_"$WRT_TARGET"_"$WRT_VER"_"$WRT_DATE".zip
-            zip -r -9 "$WRT_PACKNAME" ./upload/*
+            zip -r -9 ./"$WRT_PACKNAME" ./upload/*
             echo "WRT_PACKNAME=$WRT_PACKNAME" >> $GITHUB_ENV
           fi
           
@@ -220,4 +220,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.WRT_PACKNAME }}
-          path: ./wrt/upload/${{ env.WRT_PACKNAME }}
+          path: ./wrt/${{ env.WRT_PACKNAME }}
+          if-no-files-found: error
