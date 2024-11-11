@@ -212,12 +212,11 @@ jobs:
             done
 
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
-            zip -r -9 ./"$WRT_PACKNAME" ./upload/*
           fi
           
       - name: Upload Firmware
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.WRT_PACKNAME }}
-          path: ./wrt/${{ env.WRT_PACKNAME }}
+          path: ./wrt/upload/*
           if-no-files-found: error
