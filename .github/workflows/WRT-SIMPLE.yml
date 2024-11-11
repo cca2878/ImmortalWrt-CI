@@ -99,7 +99,9 @@ jobs:
           export WRT_CI=$(basename $GITHUB_WORKSPACE)
           export WRT_VER=$(echo $WRT_REPO | cut -d '/' -f 5-)-$WRT_BRANCH
           export WRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" $GITHUB_WORKSPACE/Simple/Config/$WRT_TARGET.txt)
-
+          export WRT_PACKNAME=Fw_"$WRT_TARGET"_"$WRT_VER"_"$WRT_DATE".zip
+          
+          echo "WRT_PACKNAME=$WRT_PACKNAME" >> $GITHUB_ENV
           echo "WRT_DATE=$WRT_DATE" >> $GITHUB_ENV
           echo "WRT_CI=$WRT_CI" >> $GITHUB_ENV
           echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
@@ -210,10 +212,7 @@ jobs:
             done
 
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
-
-            export WRT_PACKNAME=Fw_"$WRT_TARGET"_"$WRT_VER"_"$WRT_DATE".zip
             zip -r -9 ./"$WRT_PACKNAME" ./upload/*
-            echo "WRT_PACKNAME=$WRT_PACKNAME" >> $GITHUB_ENV
           fi
           
       - name: Upload Firmware
