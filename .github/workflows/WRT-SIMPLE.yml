@@ -67,9 +67,9 @@ jobs:
           remove_haskell: true
           remove_tool_cache: true
           remove_swap: true
-          remove_packages: "android* azure* clang* dotnet* firefox* ghc* golang* google* libclang* libgl1* lld* llvm* \
-            microsoft* mongodb* mono* mysql* nodejs* openjdk* php* postgresql* powershell* snap* temurin* yarn* zulu*"
+          remove_packages: "android* azure* clang* dotnet* firefox* ghc* golang* google* libclang* libgl1* lld* llvm* microsoft* mongodb* mono* mysql* nodejs* openjdk* php* postgresql* powershell* snap* temurin* yarn* zulu*"
           remove_packages_one_command: true
+          remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/share/glade* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell"
           testing: false
 
       - name: Initialization Environment
@@ -101,13 +101,13 @@ jobs:
 
       - name: Clone Code
         run: |
-          git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO /mnt/wrt/
+          git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO ./wrt/
 
-          cd /mnt/wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
+          cd ./wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
 
       - name: Check Scripts
         run: |
-          find /mnt -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
+          find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
 
       - name: Check Caches
         id: check-cache
@@ -116,16 +116,16 @@ jobs:
         with:
           key: ${{env.WRT_TARGET}}-${{env.WRT_VER}}-${{env.WRT_HASH}}
           path: |
-            /mnt/wrt/.ccache
-            /mnt/wrt/staging_dir/host*
-            /mnt/wrt/staging_dir/tool*
+            ./wrt/.ccache
+            ./wrt/staging_dir/host*
+            ./wrt/staging_dir/tool*
 
       - name: Update Caches
         if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
         run: |
           if ${{steps.check-cache.outputs.cache-hit == 'true'}}; then
-            sed -i 's/ $(tool.*\/stamp-compile)//g' /mnt/wrt/Makefile
-            sed -i 's/ $(tool.*\/stamp-install)//g' /mnt/wrt/Makefile
+            sed -i 's/ $(tool.*\/stamp-compile)//g' ./wrt/Makefile
+            sed -i 's/ $(tool.*\/stamp-install)//g' ./wrt/Makefile
 
             echo "toolchain skiped done!"
           else
@@ -141,27 +141,27 @@ jobs:
 
       - name: Custom Feeds
         run: |
-          cd /mnt/wrt/
+          cd ./wrt/
           
           cat $GITHUB_WORKSPACE/Simple/Feeds/$WRT_TARGET.txt >> feeds.conf.default
 
       - name: Update Feeds
         run: |
-          cd /mnt/wrt/
+          cd ./wrt/
 
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
       - name: Custom Packages
         run: |
-          cd /mnt/wrt/package/
+          cd ./wrt/package/
 
           $GITHUB_WORKSPACE/Simple/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Simple/Scripts/Handles.sh
 
       - name: Custom Settings
         run: |
-          cd /mnt/wrt/
+          cd ./wrt/
 
           rm -rf ./tmp* ./.config*
 
@@ -174,20 +174,20 @@ jobs:
       - name: Download Packages
         if: env.WRT_TEST != 'true'
         run: |
-          cd /mnt/wrt/
+          cd ./wrt/
 
           make download -j$(nproc) V=sc
 
       - name: Compile Firmware
         if: env.WRT_TEST != 'true'
         run: |
-          cd /mnt/wrt/
+          cd ./wrt/
 
           make -j$(nproc) V=w || make -j1 V=sc
 
       - name: Package Firmware
         run: |
-          cd /mnt/wrt/ && mkdir ./upload/
+          cd ./wrt/ && mkdir ./upload/
 
           cp -f ./.config ./upload/Config_"$WRT_TARGET"_"$WRT_VER"_"$WRT_DATE".txt
 
@@ -210,5 +210,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Fw_${{env.WRT_TARGET}}_${{env.WRT_VER}}_${{env.WRT_DATE}}
-          path: /mnt/wrt/upload/*
+          path: ./wrt/upload/*
           if-no-files-found: error
