@@ -14,7 +14,7 @@ on:
         required: true
         type: string
       WRT_BRANCH:
-        default: 'main'
+        default: 'master'
         required: true
         type: string
       WRT_CACHE:
@@ -44,7 +44,7 @@ env:
 jobs:
   core:
     name: SIMPLE_${{inputs.WRT_REPO}}_${{inputs.WRT_TARGET}}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Machine Information
         run: |
@@ -70,12 +70,6 @@ jobs:
           remove_packages: "android* azure* clang* dotnet* firefox* ghc* golang* google* libclang* libgl1* lld* llvm* \
             microsoft* mongodb* mono* mysql* nodejs* openjdk* php* postgresql* powershell* snap* temurin* yarn* zulu*"
           remove_packages_one_command: true
-          remove_folders: "/etc/apt/sources.list.d* /etc/mono* /etc/mysql* /usr/include/linux/android* /usr/lib/llvm* /usr/lib/mono* \
-            /usr/local/lib/android* /usr/local/lib/node_modules* /usr/local/share/chromium* /usr/local/share/powershell* \
-            /usr/local/share/vcpkg/ports/azure* /usr/local/share/vcpkg/ports/google* /usr/local/share/vcpkg/ports/libpq/android* \
-            /usr/local/share/vcpkg/ports/llvm* /usr/local/share/vcpkg/ports/mysql* /usr/local/share/vcpkg/ports/snap* \
-            /usr/share/azure* /usr/share/dotnet* /usr/share/glade* /usr/share/miniconda* /usr/share/php* /usr/share/swift \
-            /var/lib/mysql* /var/log/azure*"
           testing: false
 
       - name: Initialization Environment
@@ -107,13 +101,13 @@ jobs:
 
       - name: Clone Code
         run: |
-          git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO ./wrt/
+          git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO /mnt/wrt/
 
-          cd ./wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
+          cd /mnt/wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
 
       - name: Check Scripts
         run: |
-          find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
+          find /mnt -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
 
       - name: Check Caches
         id: check-cache
@@ -122,16 +116,16 @@ jobs:
         with:
           key: ${{env.WRT_TARGET}}-${{env.WRT_VER}}-${{env.WRT_HASH}}
           path: |
-            ./wrt/.ccache
-            ./wrt/staging_dir/host*
-            ./wrt/staging_dir/tool*
+            /mnt/wrt/.ccache
+            /mnt/wrt/staging_dir/host*
+            /mnt/wrt/staging_dir/tool*
 
       - name: Update Caches
         if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
         run: |
           if ${{steps.check-cache.outputs.cache-hit == 'true'}}; then
-            sed -i 's/ $(tool.*\/stamp-compile)//g' ./wrt/Makefile
-            sed -i 's/ $(tool.*\/stamp-install)//g' ./wrt/Makefile
+            sed -i 's/ $(tool.*\/stamp-compile)//g' /mnt/wrt/Makefile
+            sed -i 's/ $(tool.*\/stamp-install)//g' /mnt/wrt/Makefile
 
             echo "toolchain skiped done!"
           else
@@ -147,27 +141,27 @@ jobs:
 
       - name: Custom Feeds
         run: |
-          cd ./wrt/
+          cd /mnt/wrt/
           
           cat $GITHUB_WORKSPACE/Simple/Feeds/$WRT_TARGET.txt >> feeds.conf.default
 
       - name: Update Feeds
         run: |
-          cd ./wrt/
+          cd /mnt/wrt/
 
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
       - name: Custom Packages
         run: |
-          cd ./wrt/package/
+          cd /mnt/wrt/package/
 
           $GITHUB_WORKSPACE/Simple/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Simple/Scripts/Handles.sh
 
       - name: Custom Settings
         run: |
-          cd ./wrt/
+          cd /mnt/wrt/
 
           rm -rf ./tmp* ./.config*
 
@@ -180,20 +174,20 @@ jobs:
       - name: Download Packages
         if: env.WRT_TEST != 'true'
         run: |
-          cd ./wrt/
+          cd /mnt/wrt/
 
           make download -j$(nproc) V=sc
 
       - name: Compile Firmware
         if: env.WRT_TEST != 'true'
         run: |
-          cd ./wrt/
+          cd /mnt/wrt/
 
           make -j$(nproc) V=w || make -j1 V=sc
 
       - name: Package Firmware
         run: |
-          cd ./wrt/ && mkdir ./upload/
+          cd /mnt/wrt/ && mkdir ./upload/
 
           cp -f ./.config ./upload/Config_"$WRT_TARGET"_"$WRT_VER"_"$WRT_DATE".txt
 
@@ -216,5 +210,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Fw_${{env.WRT_TARGET}}_${{env.WRT_VER}}_${{env.WRT_DATE}}
-          path: ./wrt/upload/*
+          path: /mnt/wrt/upload/*
           if-no-files-found: error
