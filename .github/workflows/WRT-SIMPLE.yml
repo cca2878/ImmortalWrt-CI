@@ -169,21 +169,21 @@ jobs:
 
           $GITHUB_WORKSPACE/Simple/Scripts/Settings.sh
 
-          make defconfig -j$(nproc)
+          make defconfig -j $(($(nproc)+1))
 
       - name: Download Packages
         if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
 
-          make download -j$(nproc) V=sc
+          make download -j $(($(nproc)+1)) V=sc
 
       - name: Compile Firmware
         if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
 
-          make -j$(nproc) V=w || make -j1 V=sc
+          make -j $(($(nproc)+1)) V=w || make -j1 V=sc
 
       - name: Package Firmware
         run: |
