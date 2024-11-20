@@ -55,7 +55,8 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           whoami
-          apt -yqq update
+          whereis sudo
+          su -c "apt -yqq update"
           sudo apt -yqq install tzdata
           sudo ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
           sudo dpkg-reconfigure --frontend noninteractive tzdata
