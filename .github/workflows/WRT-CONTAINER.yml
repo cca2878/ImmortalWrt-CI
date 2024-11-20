@@ -7,8 +7,7 @@ on:
       WRT_TARGET:
         default: 'X86'
         required: true
-        type: choice
-        options: [MEDIATEK, X86, TEST]
+        type: string
       WRT_REPO:
         default: 'immortalwrt/immortalwrt'
         required: true
