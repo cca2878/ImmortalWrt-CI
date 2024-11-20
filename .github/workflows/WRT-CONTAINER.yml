@@ -130,7 +130,7 @@ jobs:
       - name: Check Code
         shell: bash
         run: |
-          su ubuntu -c "bash find $GITHUB_WORKSPACE -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;"
+          su ubuntu -c "bash find $GITHUB_WORKSPACE -type f -iregex '.*(txt|sh)$' -exec dos2unix {} \; -exec chmod +x {} \;"
           cd /volume_mnt/wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
 
       - name: Check Caches
