@@ -1,0 +1,204 @@
+#ubuntu容器中编译
+name: WRT-CONTAINER
+
+on:
+  workflow_dispatch:
+    inputs:
+      WRT_TARGET:
+        default: 'X86'
+        required: true
+        type: choice
+        options: [MEDIATEK, X86, TEST]
+      WRT_REPO:
+        default: 'immortalwrt/immortalwrt'
+        required: true
+        type: string
+      WRT_BRANCH:
+        default: 'master'
+        required: true
+        type: string
+      WRT_CACHE:
+        description: '使用Cache'
+        default: 'false'
+        required: true
+        type: boolean
+      WRT_TEST:
+        description: '仅输出配置文件，不编译'
+        default: 'false'
+        required: true
+        type: boolean
+
+env:
+  WRT_TARGET: ${{inputs.WRT_TARGET}}
+  WRT_THEME: Not Impl
+  WRT_NAME: Not Impl
+  WRT_WIFI: Not Impl
+  WRT_IP: Not Impl
+  WRT_PW: Not Impl
+  WRT_REPO: https://github.com/${{inputs.WRT_REPO}}
+  WRT_BRANCH: ${{inputs.WRT_BRANCH}}
+  WRT_PACKAGE: Not Impl
+  WRT_TEST: ${{inputs.WRT_TEST}}
+  WRT_CACHE: ${{inputs.WRT_CACHE}}
+
+jobs:
+  core:
+    name: CONTAINER_${{inputs.WRT_REPO}}_${{inputs.WRT_TARGET}}
+    runs-on: ubuntu-latest
+    container: 
+      image: ubuntu:latest
+      volumes:
+        - wrt_volume:/volume_mnt
+    steps:
+      - name: Machine Information
+        run: |
+          echo "======Machine=Info======"
+          lscpu | grep -E "name|Core|Thread"
+          echo "========================"
+          df -h
+          echo "========================"
+          du -h --max-depth=1
+          echo "========================"
+
+      - name: Checkout Projects
+        uses: actions/checkout@main
+
+      - name: Initialization Environment
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo -E apt -yqq update
+          sudo -E apt -yqq full-upgrade
+          sudo -E apt -yqq autoremove --purge
+          sudo -E apt -yqq autoclean
+          sudo -E apt -yqq clean
+          sudo -E apt -yqq install dos2unix zip
+          sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          sudo -E systemctl daemon-reload
+          sudo -E timedatectl set-timezone "Asia/Shanghai"
+
+      - name: Initialization Values
+        run: |
+          export WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d_%H.%M.%S")
+          export WRT_CI=$(basename $GITHUB_WORKSPACE)
+          export WRT_VER=$(echo $WRT_REPO | cut -d '/' -f 5-)-$WRT_BRANCH
+          export WRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" $GITHUB_WORKSPACE/Simple/Config/$WRT_TARGET.txt)
+          
+          echo "WRT_DATE=$WRT_DATE" >> $GITHUB_ENV
+          echo "WRT_CI=$WRT_CI" >> $GITHUB_ENV
+          echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
+          echo "WRT_TYPE=$WRT_TYPE" >> $GITHUB_ENV
+
+      - name: Clone Code
+        run: |
+          git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO /volume_mnt/wrt/
+
+          cd /volume_mnt/wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
+
+      - name: Check Scripts
+        run: |
+          find /volume_mnt/ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
+
+      - name: Check Caches
+        id: check-cache
+        if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
+        uses: actions/cache@main
+        with:
+          key: ${{env.WRT_TARGET}}-${{env.WRT_VER}}-${{env.WRT_HASH}}
+          path: |
+            /volume_mnt/wrt/.ccache
+            /volume_mnt/wrt/staging_dir/host*
+            /volume_mnt/wrt/staging_dir/tool*
+
+      - name: Update Caches
+        if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
+        run: |
+          if ${{steps.check-cache.outputs.cache-hit == 'true'}}; then
+            sed -i 's/ $(tool.*\/stamp-compile)//g' /volume_mnt/wrt/Makefile
+            sed -i 's/ $(tool.*\/stamp-install)//g' /volume_mnt/wrt/Makefile
+
+            echo "toolchain skiped done!"
+          else
+            gh extension install actions/gh-actions-cache
+
+            CACHE_LIST=$(gh actions-cache list --key "$WRT_TARGET-$WRT_VER" | cut -f 1)
+            for CACHE_KEY in $CACHE_LIST; do
+               gh actions-cache delete $CACHE_KEY --confirm
+            done
+
+            echo "caches cleanup done!"
+          fi
+
+      - name: Custom Feeds
+        run: |
+          cd /volume_mnt/wrt/
+          
+          cat $GITHUB_WORKSPACE/Simple/Feeds/$WRT_TARGET.txt >> feeds.conf.default
+
+      - name: Update Feeds
+        run: |
+          cd /volume_mnt/wrt/
+
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Custom Packages
+        run: |
+          cd /volume_mnt/wrt/package/
+
+          $GITHUB_WORKSPACE/Simple/Scripts/Packages.sh
+          $GITHUB_WORKSPACE/Simple/Scripts/Handles.sh
+
+      - name: Custom Settings
+        run: |
+          cd /volume_mnt/wrt/
+
+          rm -rf ./tmp* ./.config*
+
+          cat $GITHUB_WORKSPACE/Simple/Config/$WRT_TARGET.txt >> .config
+
+          $GITHUB_WORKSPACE/Simple/Scripts/Settings.sh
+
+          make -j $(($(nproc)+1)) defconfig
+
+      - name: Download Packages
+        if: env.WRT_TEST != 'true'
+        run: |
+          cd /volume_mnt/wrt/
+
+          make -j $(($(nproc)+1)) download V=sc
+
+      - name: Compile Firmware
+        if: env.WRT_TEST != 'true'
+        run: |
+          cd /volume_mnt/wrt/
+
+          make -j $(($(nproc)+1)) V=w || make -j 1 V=sc
+
+      - name: Package Firmware
+        run: |
+          cd /volume_mnt/wrt/ && mkdir ./upload
+
+          cp -f ./.config ./upload/Config_"$WRT_TARGET"_"$WRT_VER"_"$WRT_DATE".txt
+
+          if [[ $WRT_TEST != 'true' ]]; then
+            find ./bin/targets/ -iregex ".*\(json\|manifest\|packages\)$" -exec rm -rf {} +
+
+            for TYPE in $WRT_TYPE ; do
+              for FILE in $(find ./bin/targets/ -type f -iname "*$TYPE*.*") ; do
+                EXT=$(basename $FILE | cut -d '.' -f 2-)
+                NAME=$(basename $FILE | cut -d '.' -f 1 | grep -io "\($TYPE\).*")
+                NEW_FILE="$WRT_VER"_"$NAME"_"$WRT_DATE"."$EXT"
+                mv -f $FILE ./upload/$NEW_FILE
+              done
+            done
+
+            find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
+          fi
+          
+      - name: Upload Firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fw_${{env.WRT_TARGET}}_${{env.WRT_VER}}_${{env.WRT_DATE}}
+          path: /volume_mnt/wrt/upload/*
+          if-no-files-found: error
