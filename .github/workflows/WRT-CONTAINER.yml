@@ -108,6 +108,7 @@ jobs:
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
 
       - name: Initialize Values
+        shell: bash
         run: |
           export WRT_DATE=$(date)
           export F_DATE=$(date +"%y%m%d_%H%M%S")
@@ -115,11 +116,11 @@ jobs:
           export WRT_VER=$(echo $WRT_REPO | cut -d '/' -f 5-)-$WRT_BRANCH
           export WRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" $GITHUB_WORKSPACE/Simple/Config/$WRT_TARGET.txt)
           
-          sudo echo "WRT_DATE=$WRT_DATE" >> $GITHUB_ENV
-          sudo echo "F_DATE=$F_DATE" >> $GITHUB_ENV
-          sudo echo "WRT_CI=$WRT_CI" >> $GITHUB_ENV
-          sudo echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
-          sudo echo "WRT_TYPE=$WRT_TYPE" >> $GITHUB_ENV
+          echo "WRT_DATE=$WRT_DATE" >> $GITHUB_ENV
+          echo "F_DATE=$F_DATE" >> $GITHUB_ENV
+          echo "WRT_CI=$WRT_CI" >> $GITHUB_ENV
+          echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
+          echo "WRT_TYPE=$WRT_TYPE" >> $GITHUB_ENV
 
       - name: Clone Code
         run: |
