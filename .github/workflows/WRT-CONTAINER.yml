@@ -58,9 +58,7 @@ jobs:
           apt -yqq install tzdata
           ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
           dpkg-reconfigure --frontend noninteractive tzdata
-          useradd -ms /bin/bash build-user
-          su - build-user
-          echo "User: $(whoami)"
+          cat /etc/passwd
     
       - name: Container Information
         run: |
