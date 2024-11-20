@@ -63,6 +63,8 @@ jobs:
           ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
           dpkg-reconfigure --frontend noninteractive tzdata
           passwd -d ubuntu
+          chmod -R 775 /volume_mnt
+          chown -R ubuntu /volume_mnt
     
       - name: Free Disk Space
         uses: endersonmenezes/free-disk-space@main
