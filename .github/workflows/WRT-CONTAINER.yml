@@ -57,7 +57,7 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          echo "password" | passwd --stdin root
+          echo "password" | passwd root
           echo "password" | su -c "apt install sudo"
           sudo apt -yqq update
           sudo apt -yqq install tzdata
