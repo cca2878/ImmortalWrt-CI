@@ -60,6 +60,7 @@ jobs:
           du -h --max-depth=1
           echo "========================"
           whoami
+          echo "$(TZ=UTC-8 date +"%Y%m%d_%H%M%S")"
           echo "========================"
 
       - name: Checkout Projects
@@ -74,9 +75,8 @@ jobs:
           apt -yqq autoremove --purge
           apt -yqq autoclean
           apt -yqq clean
-          apt -yqq install dos2unix zip
+          apt -yqq install dos2unix zip curl
           bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-          systemctl daemon-reload
           timedatectl set-timezone "Asia/Shanghai"
 
       - name: Initialization Values
