@@ -49,6 +49,7 @@ jobs:
       image: ubuntu:latest
       volumes:
         - wrt_volume:/volume_mnt
+      options: --env TZ:=Asia/Shanghai
     steps:
       - name: Container Information
         run: |
@@ -60,7 +61,7 @@ jobs:
           du -h --max-depth=1
           echo "========================"
           whoami
-          echo "$(TZ=UTC-8 date +"%Y%m%d_%H%M%S")"
+          echo "$(date +"%Y%m%d_%H%M%S")"
           echo "========================"
 
       - name: Checkout Projects
@@ -77,11 +78,10 @@ jobs:
           apt -yqq clean
           apt -yqq install dos2unix zip curl
           bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-          timedatectl set-timezone "Asia/Shanghai"
 
       - name: Initialization Values
         run: |
-          export WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d_%H.%M.%S")
+          export WRT_DATE=$(TZ=UTC-8 date)
           export WRT_CI=$(basename $GITHUB_WORKSPACE)
           export WRT_VER=$(echo $WRT_REPO | cut -d '/' -f 5-)-$WRT_BRANCH
           export WRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" $GITHUB_WORKSPACE/Simple/Config/$WRT_TARGET.txt)
