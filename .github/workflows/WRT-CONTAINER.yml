@@ -57,6 +57,8 @@ jobs:
         run: |
           apt -yqq update
           apt -yqq install tzdata
+          ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+          dpkg-reconfigure --frontend noninteractive tzdata
     
       - name: Container Information
         run: |
@@ -90,7 +92,8 @@ jobs:
 
       - name: Initialize Values
         run: |
-          export WRT_DATE=$(TZ=UTC-8 date)
+          export WRT_DATE=$(date)
+          export F_DATE=$(date +"%y%m%d_%H%M%S")
           export WRT_CI=$(basename $GITHUB_WORKSPACE)
           export WRT_VER=$(echo $WRT_REPO | cut -d '/' -f 5-)-$WRT_BRANCH
           export WRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" $GITHUB_WORKSPACE/Simple/Config/$WRT_TARGET.txt)
@@ -108,7 +111,8 @@ jobs:
 
       - name: Check Scripts
         run: |
-          find /volume_mnt/ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
+          find /volume_mnt/ -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
+          find $GITHUB_WORKSPACE -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
 
       - name: Check Caches
         id: check-cache
@@ -190,7 +194,7 @@ jobs:
         run: |
           cd /volume_mnt/wrt/ && mkdir ./upload
 
-          cp -f ./.config ./upload/Config_"$WRT_TARGET"_"$WRT_VER"_"$WRT_DATE".txt
+          cp -f ./.config ./upload/Config_"$WRT_TARGET"_"$WRT_VER"_"$F_DATE".txt
 
           if [[ $WRT_TEST != 'true' ]]; then
             find ./bin/targets/ -iregex ".*\(json\|manifest\|packages\)$" -exec rm -rf {} +
@@ -199,7 +203,7 @@ jobs:
               for FILE in $(find ./bin/targets/ -type f -iname "*$TYPE*.*") ; do
                 EXT=$(basename $FILE | cut -d '.' -f 2-)
                 NAME=$(basename $FILE | cut -d '.' -f 1 | grep -io "\($TYPE\).*")
-                NEW_FILE="$WRT_VER"_"$NAME"_"$WRT_DATE"."$EXT"
+                NEW_FILE="$WRT_VER"_"$NAME"_"$F_DATE"."$EXT"
                 mv -f $FILE ./upload/$NEW_FILE
               done
             done
