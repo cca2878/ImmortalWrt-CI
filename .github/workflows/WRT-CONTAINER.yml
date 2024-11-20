@@ -48,7 +48,7 @@ jobs:
       image: ubuntu:latest
       volumes:
         - wrt_volume:/volume_mnt
-      options: --env TZ=Asia/Shanghai
+      options: --env TZ=Asia/Shanghai --user ubuntu
     defaults:
       run:
         shell: bash
@@ -57,10 +57,12 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          apt -yqq update
-          apt -yqq install tzdata sudo
-          ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-          dpkg-reconfigure --frontend noninteractive tzdata
+          echo "password" | passwd --stdin root
+          echo "password" | su -c "apt install sudo"
+          sudo apt -yqq update
+          sudo apt -yqq install tzdata
+          sudo ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+          sudo dpkg-reconfigure --frontend noninteractive tzdata
     
       - name: Container Information
         run: |
@@ -109,7 +111,8 @@ jobs:
 
       - name: Clone Code
         run: |
-          git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO /volume_mnt/wrt/
+        
+          su git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO /volume_mnt/wrt/
 
           cd /volume_mnt/wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
 
