@@ -48,27 +48,25 @@ jobs:
       image: ubuntu:latest
       volumes:
         - wrt_volume:/volume_mnt
-      options: --env TZ=Asia/Shanghai
+      options: --env TZ=Asia/Shanghai --user ubuntu
     steps:
       - name: Initialize Syetem
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          apt -yqq update
-          apt -yqq install tzdata
-          ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-          dpkg-reconfigure --frontend noninteractive tzdata
-          cat /etc/passwd
-          getent group sudo
+          sudo apt -yqq update
+          sudo apt -yqq install tzdata
+          sudo ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+          sudo dpkg-reconfigure --frontend noninteractive tzdata
     
       - name: Container Information
         run: |
           echo "=====Container=Info====="
-          lscpu | grep -E "name|Core|Thread"
+          sudo lscpu | grep -E "name|Core|Thread"
           echo "========================"
-          df -h
+          sudo df -h
           echo "========================"
-          du -h --max-depth=1
+          sudo du -h --max-depth=1
           echo "========================"
           echo "User: $(whoami)"
           echo "Time: $(date)"
@@ -81,15 +79,15 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          apt -yqq full-upgrade
+          sudo apt -yqq full-upgrade
           
-          apt -yqq install dos2unix zip curl
+          sudo apt -yqq install dos2unix zip curl
           
-          apt -yqq autoremove --purge
-          apt -yqq autoclean
-          apt -yqq clean
+          sudo apt -yqq autoremove --purge
+          sudo apt -yqq autoclean
+          sudo apt -yqq clean
 
-          bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
 
       - name: Initialize Values
         run: |
