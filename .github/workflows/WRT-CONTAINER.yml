@@ -49,6 +49,9 @@ jobs:
       volumes:
         - wrt_volume:/volume_mnt
       options: --env TZ=Asia/Shanghai --user ubuntu
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Initialize Syetem
         env:
