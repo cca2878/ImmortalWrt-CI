@@ -64,6 +64,19 @@ jobs:
           dpkg-reconfigure --frontend noninteractive tzdata
           passwd -d ubuntu
     
+      - name: Free Disk Space
+        shell: bash
+        uses: endersonmenezes/free-disk-space@main
+        continue-on-error: true
+        with:
+          remove_android: true
+          remove_dotnet: true
+          remove_haskell: true
+          remove_tool_cache: true
+          remove_swap: true
+          remove_packages_one_command: true
+          testing: false
+      
       - name: Container Information
         run: |
           echo "=====Container=Info====="
