@@ -168,6 +168,7 @@ jobs:
           cd /volume_mnt/wrt/
           
           cat $GITHUB_WORKSPACE/Simple/Feeds/$WRT_TARGET.txt >> feeds.conf.default
+          cat feeds.conf.default
 
       - name: Update Feeds
         run: |
@@ -191,7 +192,7 @@ jobs:
 
           cat $GITHUB_WORKSPACE/Simple/Config/$WRT_TARGET.txt >> .config
 
-          $GITHUB_WORKSPACE/Simple/Scripts/Settings.sh
+          bash $GITHUB_WORKSPACE/Simple/Scripts/Settings.sh
 
           make -j $(($(nproc)+1)) defconfig
 
