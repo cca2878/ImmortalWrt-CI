@@ -123,14 +123,14 @@ jobs:
           echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
           echo "WRT_TYPE=$WRT_TYPE" >> $GITHUB_ENV
 
-      - name: Clone Code
+      - name: Prepare Code
         run: |
           git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO /volume_mnt/wrt/
+          find $GITHUB_WORKSPACE -type f -iregex '.*(txt|sh)$' -exec dos2unix {} \; -exec chmod +x {} \;
 
       - name: Check Code
         shell: bash
         run: |
-          su ubuntu -c "bash find $GITHUB_WORKSPACE -type f -iregex '.*(txt|sh)$' -exec dos2unix {} \; -exec chmod +x {} \;"
           cd /volume_mnt/wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
 
       - name: Check Caches
