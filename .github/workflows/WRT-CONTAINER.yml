@@ -48,7 +48,7 @@ jobs:
       image: ubuntu:latest
       volumes:
         - wrt_volume:/volume_mnt
-      options: --env TZ=Asia/Shanghai --user ubuntu
+      options: --env TZ=Asia/Shanghai
     defaults:
       run:
         shell: bash
@@ -57,12 +57,10 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          whoami
-          whereis sudo
-          su -c "apt -yqq update"
-          sudo apt -yqq install tzdata
-          sudo ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-          sudo dpkg-reconfigure --frontend noninteractive tzdata
+          apt -yqq update
+          apt -yqq install tzdata sudo
+          ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+          dpkg-reconfigure --frontend noninteractive tzdata
     
       - name: Container Information
         run: |
@@ -73,6 +71,7 @@ jobs:
           echo "========================"
           sudo du -h --max-depth=1
           echo "========================"
+          whereis sudo
           echo "User: $(whoami)"
           echo "Time: $(date)"
           echo "========================"
