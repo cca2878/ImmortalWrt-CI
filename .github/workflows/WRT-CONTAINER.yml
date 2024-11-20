@@ -48,19 +48,18 @@ jobs:
       image: ubuntu:latest
       volumes:
         - wrt_volume:/volume_mnt
-      options: --env TZ=Asia/Shanghai --user ubuntu
+      options: --env TZ=Asia/Shanghai
     defaults:
       run:
-        shell: bash
+        shell: su ubuntu -c {0}
     steps:
       - name: Initialize Syetem
+        shell: bash
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          echo "password" | passwd root
-          echo "password" | su -c "apt install sudo"
-          sudo apt -yqq update
-          sudo apt -yqq install tzdata
+          apt -yqq update
+          apt -yqq install tzdata sudo
           sudo ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
           sudo dpkg-reconfigure --frontend noninteractive tzdata
     
