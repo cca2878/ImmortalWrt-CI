@@ -65,7 +65,6 @@ jobs:
           passwd -d ubuntu
     
       - name: Free Disk Space
-        shell: bash
         uses: endersonmenezes/free-disk-space@main
         continue-on-error: true
         with:
