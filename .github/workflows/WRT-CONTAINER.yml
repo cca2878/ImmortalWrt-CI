@@ -73,7 +73,6 @@ jobs:
           echo "========================"
           sudo du -h --max-depth=1
           echo "========================"
-          whereis sudo
           echo "User: $(whoami)"
           echo "Time: $(date)"
           echo "========================"
@@ -111,8 +110,7 @@ jobs:
 
       - name: Clone Code
         run: |
-        
-          su git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO /volume_mnt/wrt/
+          git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO /volume_mnt/wrt/
 
           cd /volume_mnt/wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
 
