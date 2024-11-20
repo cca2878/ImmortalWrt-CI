@@ -60,8 +60,9 @@ jobs:
         run: |
           apt -yqq update
           apt -yqq install tzdata sudo
-          sudo ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-          sudo dpkg-reconfigure --frontend noninteractive tzdata
+          ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+          dpkg-reconfigure --frontend noninteractive tzdata
+          passwd -d ubuntu
     
       - name: Container Information
         run: |
