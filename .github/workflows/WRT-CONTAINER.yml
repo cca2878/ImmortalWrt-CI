@@ -49,8 +49,15 @@ jobs:
       image: ubuntu:latest
       volumes:
         - wrt_volume:/volume_mnt
-      options: --env TZ:=Asia/Shanghai
+      options: --env TZ=Asia/Shanghai
     steps:
+      - name: Initialize Syetem
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt -yqq update
+          apt -yqq install tzdata
+    
       - name: Container Information
         run: |
           echo "=====Container=Info====="
@@ -60,26 +67,28 @@ jobs:
           echo "========================"
           du -h --max-depth=1
           echo "========================"
-          whoami
-          echo "$(date +"%Y%m%d_%H%M%S")"
+          echo "User: $(whoami)"
+          echo "Time: $(date)"
           echo "========================"
 
       - name: Checkout Projects
         uses: actions/checkout@main
 
-      - name: Initialization Environment
+      - name: Initialize Environment
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          apt -yqq update
           apt -yqq full-upgrade
+          
+          apt -yqq install dos2unix zip curl
+          
           apt -yqq autoremove --purge
           apt -yqq autoclean
           apt -yqq clean
-          apt -yqq install dos2unix zip curl
+
           bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
 
-      - name: Initialization Values
+      - name: Initialize Values
         run: |
           export WRT_DATE=$(TZ=UTC-8 date)
           export WRT_CI=$(basename $GITHUB_WORKSPACE)
