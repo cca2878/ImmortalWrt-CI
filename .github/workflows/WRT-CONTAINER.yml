@@ -99,6 +99,7 @@ jobs:
           export WRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" $GITHUB_WORKSPACE/Simple/Config/$WRT_TARGET.txt)
           
           echo "WRT_DATE=$WRT_DATE" >> $GITHUB_ENV
+          echo "F_DATE=$F_DATE" >> $GITHUB_ENV
           echo "WRT_CI=$WRT_CI" >> $GITHUB_ENV
           echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
           echo "WRT_TYPE=$WRT_TYPE" >> $GITHUB_ENV
@@ -111,7 +112,6 @@ jobs:
 
       - name: Check Scripts
         run: |
-          find /volume_mnt/ -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
           find $GITHUB_WORKSPACE -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
 
       - name: Check Caches
@@ -214,6 +214,6 @@ jobs:
       - name: Upload Firmware
         uses: actions/upload-artifact@v4
         with:
-          name: Fw_${{env.WRT_TARGET}}_${{env.WRT_VER}}_${{env.WRT_DATE}}
+          name: Fw_${{env.WRT_TARGET}}_${{env.WRT_VER}}_${{env.F_DATE}}
           path: /volume_mnt/wrt/upload/*
           if-no-files-found: error
