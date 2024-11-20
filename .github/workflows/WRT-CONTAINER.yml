@@ -180,8 +180,8 @@ jobs:
         run: |
           cd /volume_mnt/wrt/package/
 
-          $GITHUB_WORKSPACE/Simple/Scripts/Packages.sh
-          $GITHUB_WORKSPACE/Simple/Scripts/Handles.sh
+          bash $GITHUB_WORKSPACE/Simple/Scripts/Packages.sh
+          bash $GITHUB_WORKSPACE/Simple/Scripts/Handles.sh
 
       - name: Custom Settings
         run: |
