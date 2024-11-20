@@ -51,7 +51,7 @@ jobs:
       options: --env TZ=Asia/Shanghai
     defaults:
       run:
-        shell: su ubuntu -c {0}
+        shell: su ubuntu -c "bash {0}"
     steps:
       - name: Initialize Syetem
         shell: bash
