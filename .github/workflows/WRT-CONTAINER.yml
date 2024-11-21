@@ -88,7 +88,7 @@ jobs:
           sudo du -h --max-depth=1
           echo "========================"
           echo "User: $(whoami)"
-          echo "Time: $(date)"
+          echo "Time: $(date -Iseconds)"
           echo "========================"
 
       - name: Checkout Projects
@@ -111,7 +111,7 @@ jobs:
       - name: Initialize Values
         shell: bash
         run: |
-          export WRT_DATE=$(date)
+          export WRT_DATE=$(date -Iseconds)
           export F_DATE=$(date +"%y%m%d_%H%M%S")
           export WRT_CI=$(basename $GITHUB_WORKSPACE)
           export WRT_VER=$(echo $WRT_REPO | cut -d '/' -f 5-)-$WRT_BRANCH
@@ -194,7 +194,7 @@ jobs:
 
           bash $GITHUB_WORKSPACE/Simple/Scripts/Settings.sh
 
-          make -j $(($(nproc)+1)) defconfig
+          make -j $(($(nproc)+1)) defconfig V=sc
 
       - name: Download Packages
         if: env.WRT_TEST != 'true'
@@ -214,7 +214,7 @@ jobs:
         run: |
           cd /volume_mnt/wrt/ && mkdir ./upload
 
-          cp -f ./.config ./upload/Config_"$WRT_TARGET"_"$WRT_VER"_"$F_DATE".txt
+          cp -f ./.config ./upload/config_"$WRT_TARGET"_"$WRT_VER"_"$F_DATE".txt
 
           if [[ $WRT_TEST != 'true' ]]; then
             find ./bin/targets/ -iregex ".*\(json\|manifest\|packages\)$" -exec rm -rf {} +
@@ -234,6 +234,6 @@ jobs:
       - name: Upload Firmware
         uses: actions/upload-artifact@v4
         with:
-          name: Fw_${{env.WRT_TARGET}}_${{env.WRT_VER}}_${{env.F_DATE}}
+          name: fw_${{env.WRT_TARGET}}_${{env.WRT_VER}}_${{env.F_DATE}}
           path: /volume_mnt/wrt/upload/*
           if-no-files-found: error
