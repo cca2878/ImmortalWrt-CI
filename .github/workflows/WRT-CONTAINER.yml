@@ -41,30 +41,15 @@ env:
   WRT_CACHE: ${{inputs.WRT_CACHE}}
 
 jobs:
-  pre:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Free Disk Space
-        uses: endersonmenezes/free-disk-space@main
-        continue-on-error: true
-        with:
-          remove_android: true
-          remove_dotnet: true
-          remove_haskell: true
-          remove_tool_cache: true
-          remove_swap: true
-          remove_packages_one_command: true
-          testing: false
-          
   core:
     name: CONTAINER_${{inputs.WRT_REPO}}_${{inputs.WRT_TARGET}}
-    needs: pre
     runs-on: ubuntu-latest
     container: 
       image: ubuntu:latest
       volumes:
         - wrt_volume:/volume_mnt
-      options: --env TZ=Asia/Shanghai
+        - /:/host_root
+      options: --privileged --env TZ=Asia/Shanghai
     defaults:
       run:
         shell: su ubuntu -c "bash {0}"
@@ -74,6 +59,8 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
+          echo "Host root:"
+          ls /host_root
           apt -yqq update
           apt -yqq install tzdata sudo
           ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
@@ -81,6 +68,23 @@ jobs:
           passwd -d ubuntu
           chmod -R 775 /volume_mnt
           chown -R ubuntu /volume_mnt
+      
+      - name: Free disk space
+        shell: bash
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          rm -rfv /host_root/usr/local/lib/android
+          rm -rfv /host_root/usr/share/dotnet
+          rm -rfv /host_root/opt/ghc
+          rm -rfv /host_root/usr/local/.ghcup
+          rm -rfv /host_root/opt/hostedtoolcache
+          rm -rfv /host_root/usr/share/swift
+          rm -rfv /host_root/usr/share/miniconda
+          rm -rfv /host_root/usr/share/az*
+          rm -rfv /host_root/usr/local/lib/node_modules
+          rm -rfv /host_root/usr/local/share/chromium
+          rm -rfv /host_root/usr/local/share/powershell
         
       - name: Container Information
         run: |
