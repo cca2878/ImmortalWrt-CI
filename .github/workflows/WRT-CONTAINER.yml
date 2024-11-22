@@ -58,8 +58,6 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          echo "Host root:"
-          ls /host_root
           apt -yqq update
           apt -yqq install tzdata sudo
           ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
