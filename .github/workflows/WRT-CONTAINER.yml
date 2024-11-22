@@ -47,8 +47,7 @@ jobs:
     container: 
       image: ubuntu:latest
       volumes:
-        - wrt_volume:/volume_mnt
-        - /:/host_root
+        - /mnt:/volume_mnt
       options: --env TZ=Asia/Shanghai
     defaults:
       run:
@@ -71,6 +70,7 @@ jobs:
       
       - name: Free disk space
         shell: bash
+        if: false
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
