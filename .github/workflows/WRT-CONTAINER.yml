@@ -39,6 +39,7 @@ env:
   WRT_PACKAGE: Not Impl
   WRT_TEST: ${{inputs.WRT_TEST}}
   WRT_CACHE: ${{inputs.WRT_CACHE}}
+  HOST_ROOT: /host_root
 
 jobs:
   core:
@@ -65,6 +66,7 @@ jobs:
           passwd -d ubuntu
           chmod -R 775 /volume_mnt
           chown -R ubuntu /volume_mnt
+          ls /usr/local/lib/android
       
       - name: Free disk space
         shell: bash
@@ -73,12 +75,12 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           echo "Removing Android, .Net, Haskell, Tool Cache..."
-          echo "- Android: $(rm -rfv /host_root/usr/local/lib/android 2>&1 | grep "removed" | wc -l) files removed."
-          echo "- .Net: $(rm -rfv /host_root/usr/share/dotnet 2>&1 | grep "removed" | wc -l) files removed."
-          echo "- Haskell: $(rm -rfv /host_root/opt/ghc /host_root/usr/local/.ghcup 2>&1 | grep "removed" | wc -l) files removed."
-          echo "- Tool Cache: $(rm -rfv /host_root/opt/hostedtoolcache 2>&1 | grep "removed" | wc -l) files removed."
+          echo "- Android: $(rm -rfv $HOST_ROOT/usr/local/lib/android 2>&1 | grep "removed" | wc -l) files removed."
+          echo "- .Net: $(rm -rfv $HOST_ROOT/usr/share/dotnet 2>&1 | grep "removed" | wc -l) files removed."
+          echo "- Haskell: $(rm -rfv $HOST_ROOT/opt/ghc /host_root/usr/local/.ghcup 2>&1 | grep "removed" | wc -l) files removed."
+          echo "- Tool Cache: $(rm -rfv $HOST_ROOT/opt/hostedtoolcache 2>&1 | grep "removed" | wc -l) files removed."
           echo "Removing Custom Folder..."
-          echo "- Custom Folder: $(rm -rfv /host_root/usr/share/swift /host_root/usr/share/miniconda /host_root/usr/share/az* /host_root/usr/local/lib/node_modules /host_root/usr/local/share/chromium /host_root/usr/local/share/powershell 2>&1 | grep "removed" | wc -l) files removed."
+          echo "- Custom Folder: $(rm -rfv $HOST_ROOT/usr/share/swift $HOST_ROOT/usr/share/miniconda $HOST_ROOT/usr/share/az* $HOST_ROOT/usr/local/lib/node_modules $HOST_ROOT/usr/local/share/chromium $HOST_ROOT/usr/local/share/powershell 2>&1 | grep "removed" | wc -l) files removed."
 
       - name: Container Information
         run: |
