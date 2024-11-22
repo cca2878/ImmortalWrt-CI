@@ -75,12 +75,12 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           echo "Removing Android, .Net, Haskell, Tool Cache..."
-          echo " - Android: $(rm -rfv /host_root/usr/local/lib/android 2>&1 | grep "deleted" | wc -l) files removed."
-          echo " - .Net: $(rm -rfv /host_root/usr/share/dotnet 2>&1 | grep "deleted" | wc -l) files removed."
-          echo " - Haskell: $(rm -rfv /host_root/opt/ghc /host_root/usr/local/.ghcup 2>&1 | grep "deleted" | wc -l) files removed."
-          echo " - Tool Cache: $(rm -rfv /host_root/opt/hostedtoolcache 2>&1 | grep "deleted" | wc -l) files removed."
+          echo "- Android: $(rm -rfv /host_root/usr/local/lib/android 2>&1 | grep "removed" | wc -l) files removed."
+          echo "- .Net: $(rm -rfv /host_root/usr/share/dotnet 2>&1 | grep "removed" | wc -l) files removed."
+          echo "- Haskell: $(rm -rfv /host_root/opt/ghc /host_root/usr/local/.ghcup 2>&1 | grep "removed" | wc -l) files removed."
+          echo "- Tool Cache: $(rm -rfv /host_root/opt/hostedtoolcache 2>&1 | grep "removed" | wc -l) files removed."
           echo "Removing Custom Folder..."
-          echo " - Custom Folder: $(rm -rfv /host_root/usr/share/swift /host_root/usr/share/miniconda /host_root/usr/share/az* /host_root/usr/local/lib/node_modules /host_root/usr/local/share/chromium /host_root/usr/local/share/powershell 2>&1 | grep "deleted" | wc -l) files removed."
+          echo "- Custom Folder: $(rm -rfv /host_root/usr/share/swift /host_root/usr/share/miniconda /host_root/usr/share/az* /host_root/usr/local/lib/node_modules /host_root/usr/local/share/chromium /host_root/usr/local/share/powershell 2>&1 | grep "removed" | wc -l) files removed."
 
       - name: Container Information
         run: |
