@@ -55,6 +55,8 @@ jobs:
           echo "========================"
           du -h --max-depth=1
           echo "========================"
+          echo "AGENT_TOOLSDIRECTORY: ${AGENT_TOOLSDIRECTORY}"
+          echo "========================"
 
       - name: Checkout Projects
         uses: actions/checkout@main
