@@ -49,7 +49,7 @@ jobs:
       volumes:
         - wrt_volume:/volume_mnt
         - /:/host_root
-      options: --privileged --env TZ=Asia/Shanghai
+      options: --env TZ=Asia/Shanghai
     defaults:
       run:
         shell: su ubuntu -c "bash {0}"
@@ -74,18 +74,14 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          rm -rfv /host_root/usr/local/lib/android
-          rm -rfv /host_root/usr/share/dotnet
-          rm -rfv /host_root/opt/ghc
-          rm -rfv /host_root/usr/local/.ghcup
-          rm -rfv /host_root/opt/hostedtoolcache
-          rm -rfv /host_root/usr/share/swift
-          rm -rfv /host_root/usr/share/miniconda
-          rm -rfv /host_root/usr/share/az*
-          rm -rfv /host_root/usr/local/lib/node_modules
-          rm -rfv /host_root/usr/local/share/chromium
-          rm -rfv /host_root/usr/local/share/powershell
-        
+          echo "Removing Android, .Net, Haskell, Tool Cache..."
+          echo " - Android: $(rm -rfv /host_root/usr/local/lib/android 2>&1 | grep "deleted" | wc -l) files removed."
+          echo " - .Net: $(rm -rfv /host_root/usr/share/dotnet 2>&1 | grep "deleted" | wc -l) files removed."
+          echo " - Haskell: $(rm -rfv /host_root/opt/ghc /host_root/usr/local/.ghcup 2>&1 | grep "deleted" | wc -l) files removed."
+          echo " - Tool Cache: $(rm -rfv /host_root/opt/hostedtoolcache 2>&1 | grep "deleted" | wc -l) files removed."
+          echo "Removing Custom Folder..."
+          echo " - Custom Folder: $(rm -rfv /host_root/usr/share/swift /host_root/usr/share/miniconda /host_root/usr/share/az* /host_root/usr/local/lib/node_modules /host_root/usr/local/share/chromium /host_root/usr/local/share/powershell 2>&1 | grep "deleted" | wc -l) files removed."
+
       - name: Container Information
         run: |
           echo "=====Container=Info====="
