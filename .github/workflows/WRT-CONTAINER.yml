@@ -21,6 +21,11 @@ on:
         default: 'false'
         required: true
         type: boolean
+      WRT_TAGCONF:
+        description: '标出使用的Conf'
+        default: 'false'
+        required: true
+        type: boolean
       WRT_TEST:
         description: '仅输出配置文件，不编译'
         default: 'false'
@@ -29,6 +34,7 @@ on:
 
 env:
   WRT_TARGET: ${{inputs.WRT_TARGET}}
+  WRT_TAGCONF: ${{inputs.WRT_TAGCONF}}
   WRT_THEME: Not Impl
   WRT_NAME: Not Impl
   WRT_WIFI: Not Impl
@@ -120,6 +126,12 @@ jobs:
           export WRT_VER=$(echo $WRT_REPO | cut -d '/' -f 5-)-$WRT_BRANCH
           export WRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" $GITHUB_WORKSPACE/Simple/Config/$WRT_TARGET.txt)
           
+          if [ $WRT_TAGCONF ]; then
+            export WRT_TAG=$WRT_TARGET'_'$WRT_DATE
+          else
+            export WRT_TAG='build_'$WRT_DATE
+          fi
+
           echo "WRT_DATE=$WRT_DATE" >> $GITHUB_ENV
           echo "F_DATE=$F_DATE" >> $GITHUB_ENV
           echo "WRT_CI=$WRT_CI" >> $GITHUB_ENV
