@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       WRT_TARGET:
-        default: 'X86'
+        default: 'x86'
         required: true
         type: string
       WRT_REPO:
