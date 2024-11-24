@@ -46,7 +46,7 @@ env:
 
 jobs:
   core:
-    name: CONTAINER_${{env.WRT_REPO}}_${{env.WRT_CONF}}
+    name: CONTAINER_${{input.WRT_REPO}}_${{input.WRT_CONF}}
     runs-on: ubuntu-latest
     container: 
       image: ubuntu:latest
