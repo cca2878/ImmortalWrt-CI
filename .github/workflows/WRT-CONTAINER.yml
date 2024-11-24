@@ -117,6 +117,18 @@ jobs:
           echo "F_DATE=$F_DATE" >> $GITHUB_ENV
           echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
 
+      - name: Checkout CI Code
+        uses: actions/checkout@v4
+        with:
+          path: ${{env.PATH_CI}}
+          
+      - name: Checkout Src Code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{env.WRT_REPO}}
+          ref: ${{env.WRT_BRANCH}}
+          path: ${{env.PATH_SRC}}
+
       - name: Initialize Environment
         run: |
           sudo apt -yqq full-upgrade
@@ -128,18 +140,6 @@ jobs:
           sudo apt -yqq clean
 
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-
-      - name: Checkout CI Code
-        uses: actions/checkout@main
-        with:
-          path: ${{env.PATH_CI}}
-          
-      - name: Checkout Src Code
-        uses: actions/checkout@main
-        with:
-          repository: ${{env.WRT_REPO}}
-          ref: ${{env.WRT_BRANCH}}
-          path: ${{env.PATH_SRC}}
 
       - name: Prepare CI Code
         run: |
