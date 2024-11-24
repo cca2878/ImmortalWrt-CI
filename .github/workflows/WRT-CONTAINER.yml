@@ -4,10 +4,6 @@ name: WRT-CONTAINER
 on:
   workflow_dispatch:
     inputs:
-      WRT_CONF:
-        default: 'x86'
-        required: true
-        type: string
       WRT_REPO:
         default: 'immortalwrt/immortalwrt'
         required: true
@@ -16,26 +12,34 @@ on:
         default: 'master'
         required: true
         type: string
+      WRT_CONF:
+        default: 'x86'
+        required: true
+        type: string
       WRT_CACHE:
         description: '使用Cache'
         default: 'false'
         required: true
         type: boolean
       WRT_TAGCONF:
-        description: '标出使用的Conf'
+        description: 'Tag使用的Conf'
         default: 'false'
         required: true
         type: boolean
       WRT_TEST:
-        description: '仅输出配置文件，不编译'
+        description: '仅生成Conf'
         default: 'false'
         required: true
         type: boolean
+      PATH_MOUNT:
+        default: '/volume_mnt'
+        required: true
+        type: string
 
 env:
-  PATH_MOUNT: /volume_mnt
+  PATH_MOUNT: ${{inputs.PATH_MOUNT}}
   PATH_CI: ci
-  PATH_SRC: wrt_src
+  PATH_SRC: opwrt_src
   
   WRT_CONF: ${{inputs.WRT_CONF}}
   WRT_TAGCONF: ${{inputs.WRT_TAGCONF}}
@@ -51,14 +55,14 @@ jobs:
     container: 
       image: ubuntu:latest
       volumes:
-        - /mnt:${{env.PATH_MOUNT}}
+        - /mnt:${{inputs.PATH_MOUNT}}
       options: --env TZ=Asia/Shanghai
     defaults:
       run:
         shell: su ubuntu -c "bash {0}"
     env:
       DEBIAN_FRONTEND: noninteractive
-      GITHUB_WORKSPACE: ${{env.MOUNT_PATH}}
+      GITHUB_WORKSPACE: ${{inputs.PATH_MOUNT}}
     steps:
       - name: Initialize Syetem
         shell: bash
