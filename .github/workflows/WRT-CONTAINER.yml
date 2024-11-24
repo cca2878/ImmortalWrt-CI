@@ -208,7 +208,7 @@ jobs:
           rm -rf ./tmp* ./.config*
 
           cat $GITHUB_WORKSPACE/Simple/Config/$WRT_TARGET.txt >> .config
-
+          echo "outside: $WRT_TAG"
           bash $GITHUB_WORKSPACE/Simple/Scripts/Settings.sh
 
           make -j $(($(nproc)+1)) defconfig V=sc
