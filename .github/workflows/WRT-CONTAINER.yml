@@ -134,7 +134,7 @@ jobs:
           fi
           echo $WRT_TAG
 
-          echo "WRT_DATE=$WRT_DATE" >> $GITHUB_ENV
+          echo "WRT_TAG=$WRT_TAG" >> $GITHUB_ENV
           echo "F_DATE=$F_DATE" >> $GITHUB_ENV
           echo "WRT_CI=$WRT_CI" >> $GITHUB_ENV
           echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
