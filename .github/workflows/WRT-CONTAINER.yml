@@ -72,6 +72,10 @@ jobs:
           ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
           dpkg-reconfigure --frontend noninteractive tzdata
           passwd -d ubuntu
+          if [ -d $PATH_WORKDIR ]; then
+            rm -rf $PATH_WORKDIR
+          fi
+          mkdir $PATH_WORKDIR
           chmod -R 775 $PATH_WORKDIR
           chown -R ubuntu $PATH_WORKDIR
       
