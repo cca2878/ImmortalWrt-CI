@@ -62,7 +62,6 @@ jobs:
         shell: su ubuntu -c "bash {0}"
     env:
       DEBIAN_FRONTEND: noninteractive
-      GITHUB_WORKSPACE: ${{inputs.PATH_MOUNT}}
     steps:
       - name: Initialize Syetem
         shell: bash
@@ -74,6 +73,7 @@ jobs:
           passwd -d ubuntu
           chmod -R 775 $PATH_MOUNT
           chown -R ubuntu $PATH_MOUNT
+          echo "GITHUB_WORKSPACE=$PATH_MOUNT" >> $GITHUB_ENV
       
       - name: Free disk space
         shell: bash
