@@ -137,13 +137,15 @@ jobs:
       - name: Check Code
         shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/$PATH_CI && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
+          cd $GITHUB_WORKSPACE/$PATH_SRC 
+          echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
+          echo "$(git log -1 --pretty=format:'%h')"
           echo "Hash: $WRT_HASH"
       
       - name: Prepare Code
         run: |
-          cp $GITHUB_WORKSPACE/$PATH_CI $PATH_WORKDIR/$PATH_CI
-          cp $GITHUB_WORKSPACE/$PATH_SRC $PATH_WORKDIR/$PATH_SRC
+          cp -r $GITHUB_WORKSPACE/$PATH_CI $PATH_WORKDIR/$PATH_CI
+          cp -r $GITHUB_WORKSPACE/$PATH_SRC $PATH_WORKDIR/$PATH_SRC
           sudo rm -rf $GITHUB_WORKSPACE/$PATH_CI
           sudo rm -rf $GITHUB_WORKSPACE/$PATH_SRC
         
