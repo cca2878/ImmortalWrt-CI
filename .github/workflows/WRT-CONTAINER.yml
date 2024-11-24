@@ -68,7 +68,7 @@ jobs:
         shell: bash
         run: |
           apt -yqq update
-          apt -yqq install tzdata sudo
+          apt -yqq install tzdata sudo git
           ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
           dpkg-reconfigure --frontend noninteractive tzdata
           passwd -d ubuntu
