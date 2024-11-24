@@ -139,8 +139,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/$PATH_SRC 
           echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
-          echo "$(git log -1 --pretty=format:'%h')"
-          echo "Hash: $WRT_HASH"
+          echo "Hash: $(git log -1 --pretty=format:'%h')"
       
       - name: Prepare Code
         run: |
