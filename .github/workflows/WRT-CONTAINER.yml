@@ -38,6 +38,7 @@ on:
 
 env:
   PATH_MOUNT: ${{inputs.PATH_MOUNT}}
+  PATH_WORKDIR: ${{inputs.PATH_MOUNT}}/work
   PATH_CI: ci
   PATH_SRC: opwrt_src
   
@@ -71,9 +72,8 @@ jobs:
           ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
           dpkg-reconfigure --frontend noninteractive tzdata
           passwd -d ubuntu
-          chmod -R 775 $PATH_MOUNT
-          chown -R ubuntu $PATH_MOUNT
-          echo "GITHUB_WORKSPACE=$PATH_MOUNT" >> $GITHUB_ENV
+          chmod -R 775 $PATH_WORKDIR
+          chown -R ubuntu $PATH_WORKDIR
       
       - name: Free disk space
         shell: bash
@@ -98,7 +98,6 @@ jobs:
           echo "========================"
           echo "User: $(whoami)"
           echo "Time: $(date -Iseconds)"
-          echo "GithubWorkspace: $GITHUB_WORKSPACE"
           echo "========================"
           
       - name: Initialize Values
@@ -142,14 +141,17 @@ jobs:
 
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
 
-      - name: Prepare CI Code
+      - name: Prepare Code
         run: |
-          find $GITHUB_WORKSPACE/$PATH_CI -type f -iregex '.*(txt|sh)$' -exec dos2unix {} \; -exec chmod 777 {} \;
+          mv $GITHUB_WORKSPACE/$PATH_CI $PATH_WORKDIR/$PATH_CI
+          mv $GITHUB_WORKSPACE/$PATH_SRC $PATH_WORKDIR/$PATH_SRC
+        
+          find $PATH_WORKDIR/$PATH_CI -type f -iregex '.*(txt|sh)$' -exec dos2unix {} \; -exec chmod 777 {} \;
 
       - name: Check Code
         shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/$PATH_SRC && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
+          cd $PATH_WORKDIR/$PATH_SRC && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
           echo "Hash: $WRT_HASH"
 
       - name: Check Caches
@@ -159,16 +161,16 @@ jobs:
         with:
           key: ${{env.WRT_VER}}-${{env.WRT_CONF}}-${{env.WRT_HASH}}
           path: |
-            $GITHUB_WORKSPACE/$PATH_SRC/.ccache
-            $GITHUB_WORKSPACE/$PATH_SRC/staging_dir/host*
-            $GITHUB_WORKSPACE/$PATH_SRC/staging_dir/tool*
+            $PATH_WORKDIR/$PATH_SRC/.ccache
+            $PATH_WORKDIR/$PATH_SRC/staging_dir/host*
+            $PATH_WORKDIR/$PATH_SRC/staging_dir/tool*
 
       - name: Update Caches
         if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
         run: |
           if ${{steps.check-cache.outputs.cache-hit == 'true'}}; then
-            sed -i 's/ $(tool.*\/stamp-compile)//g' $GITHUB_WORKSPACE/$PATH_SRC/Makefile
-            sed -i 's/ $(tool.*\/stamp-install)//g' $GITHUB_WORKSPACE/$PATH_SRC/Makefile
+            sed -i 's/ $(tool.*\/stamp-compile)//g' $PATH_WORKDIR/$PATH_SRC/Makefile
+            sed -i 's/ $(tool.*\/stamp-install)//g' $PATH_WORKDIR/$PATH_SRC/Makefile
 
             echo "toolchain skiped done!"
           else
@@ -184,52 +186,52 @@ jobs:
 
       - name: Custom Feeds
         run: |
-          cd $GITHUB_WORKSPACE/$PATH_SRC
+          cd $PATH_WORKDIR/$PATH_SRC
           
-          cat $GITHUB_WORKSPACE/$PATH_CI/Simple/Feeds/$WRT_CONF.txt >> feeds.conf.default
+          cat $PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt >> feeds.conf.default
           cat feeds.conf.default
 
       - name: Update Feeds
         run: |
-          cd $GITHUB_WORKSPACE/$PATH_SRC
+          cd $PATH_WORKDIR/$PATH_SRC
 
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
       - name: Custom Packages
         run: |
-          cd $GITHUB_WORKSPACE/$PATH_SRC/package/
+          cd $PATH_WORKDIR/$PATH_SRC/package/
 
-          bash $GITHUB_WORKSPACE/$PATH_CI/Simple/Scripts/Packages.sh
-          bash $GITHUB_WORKSPACE/$PATH_CI/Simple/Scripts/Handles.sh
+          bash $PATH_WORKDIR/$PATH_CI/Simple/Scripts/Packages.sh
+          bash $PATH_WORKDIR/$PATH_CI/Simple/Scripts/Handles.sh
 
       - name: Custom Settings
         run: |
-          cd $GITHUB_WORKSPACE/$PATH_SRC
+          cd $PATH_WORKDIR/$PATH_SRC
 
           rm -rf ./tmp* ./.config*
 
-          cat $GITHUB_WORKSPACE/$PATH_CI/Simple/Config/$WRT_CONF.txt >> .config
-          bash $GITHUB_WORKSPACE/$PATH_CI/Simple/Scripts/Settings.sh
+          cat $PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt >> .config
+          bash $PATH_WORKDIR/$PATH_CI/Simple/Scripts/Settings.sh
 
           make -j $(($(nproc)+1)) defconfig V=sc
 
       - name: Download Packages
         if: env.WRT_TEST != 'true'
         run: |
-          cd $GITHUB_WORKSPACE/$PATH_SRC
+          cd $PATH_WORKDIR/$PATH_SRC
           make -j $(($(nproc)+1)) download V=w
 
       - name: Compile Firmware
         if: env.WRT_TEST != 'true'
         run: |
-          cd $GITHUB_WORKSPACE/$PATH_SRC
+          cd $PATH_WORKDIR/$PATH_SRC
 
           make -j $(($(nproc)+1)) V=w || make -j 1 V=sc
 
       - name: Package Firmware
         run: |
-          cd $GITHUB_WORKSPACE/$PATH_SRC && mkdir ./upload
+          cd $PATH_WORKDIR/$PATH_SRC && mkdir ./upload
 
           cp -f ./.config ./upload/config_"$WRT_VER"_"$WRT_CONF"_"$F_DATE".txt
 
@@ -242,5 +244,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{env.WRT_VER}}_${{env.WRT_CONF}}_${{env.F_DATE}}
-          path: ${{env.GITHUB_WORKSPACE}}/${{env.PATH_SRC}}/upload/*
+          path: ${{env.PATH_WORKDIR}}/${{env.PATH_SRC}}/upload/*
           if-no-files-found: error
