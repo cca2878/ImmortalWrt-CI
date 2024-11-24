@@ -76,8 +76,6 @@ jobs:
       - name: Free disk space
         shell: bash
         if: false
-        env:
-          DEBIAN_FRONTEND: noninteractive
         run: |
           echo "Removing Android, .Net, Haskell, Tool Cache..."
           echo "- Android: $(rm -rfv $HOST_ROOT/usr/local/lib/android 2>&1 | grep "removed" | wc -l) files removed."
@@ -104,8 +102,6 @@ jobs:
         uses: actions/checkout@main
 
       - name: Initialize Environment
-        env:
-          DEBIAN_FRONTEND: noninteractive
         run: |
           sudo apt -yqq full-upgrade
           
@@ -122,9 +118,7 @@ jobs:
         run: |
           export WRT_DATE=$(date -Iseconds)
           export F_DATE=$(date +"%y%m%d_%H%M%S")
-          export WRT_CI=$(basename $GITHUB_WORKSPACE)
           export WRT_VER=$(echo $WRT_REPO | cut -d '/' -f 5-)-$WRT_BRANCH
-          export WRT_TYPE=$(sed -n "1{s/^#//;s/\r$//;p;q}" $GITHUB_WORKSPACE/Simple/Config/$WRT_TARGET.txt)
           
           if [ $WRT_TAGCONF ]; then
             export WRT_TAG=$WRT_TARGET'_'$WRT_DATE
@@ -134,9 +128,7 @@ jobs:
 
           echo "WRT_TAG=$WRT_TAG" >> $GITHUB_ENV
           echo "F_DATE=$F_DATE" >> $GITHUB_ENV
-          echo "WRT_CI=$WRT_CI" >> $GITHUB_ENV
           echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
-          echo "WRT_TYPE=$WRT_TYPE" >> $GITHUB_ENV
 
       - name: Prepare Code
         run: |
