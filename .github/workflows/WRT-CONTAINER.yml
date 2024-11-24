@@ -98,6 +98,7 @@ jobs:
           echo "========================"
           echo "User: $(whoami)"
           echo "Time: $(date -Iseconds)"
+          echo "GithubWorkspace: $GITHUB_WORKSPACE"
           echo "========================"
           
       - name: Initialize Values
