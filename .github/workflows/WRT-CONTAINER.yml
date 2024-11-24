@@ -68,7 +68,8 @@ jobs:
         shell: bash
         run: |
           apt -yqq update
-          apt -yqq install tzdata sudo git
+          apt -yqq install tzdata sudo git dos2unix curl
+          
           ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
           dpkg-reconfigure --frontend noninteractive tzdata
           passwd -d ubuntu
@@ -133,30 +134,29 @@ jobs:
           ref: ${{env.WRT_BRANCH}}
           path: ${{env.PATH_SRC}}
 
+      - name: Check Code
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/$PATH_CI && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
+          echo "Hash: $WRT_HASH"
+      
+      - name: Prepare Code
+        run: |
+          cp $GITHUB_WORKSPACE/$PATH_CI $PATH_WORKDIR/$PATH_CI
+          cp $GITHUB_WORKSPACE/$PATH_SRC $PATH_WORKDIR/$PATH_SRC
+          sudo rm -rf $GITHUB_WORKSPACE/$PATH_CI
+          sudo rm -rf $GITHUB_WORKSPACE/$PATH_SRC
+        
+          find $PATH_WORKDIR/$PATH_CI -type f -iregex '.*(txt|sh)$' -exec dos2unix {} \; -exec chmod 777 {} \;
+
       - name: Initialize Environment
         run: |
-          sudo apt -yqq full-upgrade
-          
-          sudo apt -yqq install dos2unix zip curl
-          
+          sudo apt -yqq full-upgrade        
           sudo apt -yqq autoremove --purge
           sudo apt -yqq autoclean
           sudo apt -yqq clean
 
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-
-      - name: Prepare Code
-        run: |
-          mv $GITHUB_WORKSPACE/$PATH_CI $PATH_WORKDIR/$PATH_CI
-          mv $GITHUB_WORKSPACE/$PATH_SRC $PATH_WORKDIR/$PATH_SRC
-        
-          find $PATH_WORKDIR/$PATH_CI -type f -iregex '.*(txt|sh)$' -exec dos2unix {} \; -exec chmod 777 {} \;
-
-      - name: Check Code
-        shell: bash
-        run: |
-          cd $PATH_WORKDIR/$PATH_SRC && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
-          echo "Hash: $WRT_HASH"
 
       - name: Check Caches
         id: check-cache
