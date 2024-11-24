@@ -59,13 +59,12 @@ jobs:
     defaults:
       run:
         shell: su ubuntu -c "bash {0}"
+    env:
+      DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Initialize Syetem
         shell: bash
-        env:
-          DEBIAN_FRONTEND: noninteractive
         run: |
-          echo $WRT_TAGCONF
           apt -yqq update
           apt -yqq install tzdata sudo
           ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
@@ -132,7 +131,6 @@ jobs:
           else
             export WRT_TAG='build_'$WRT_DATE
           fi
-          echo $WRT_TAG
 
           echo "WRT_TAG=$WRT_TAG" >> $GITHUB_ENV
           echo "F_DATE=$F_DATE" >> $GITHUB_ENV
@@ -208,7 +206,6 @@ jobs:
           rm -rf ./tmp* ./.config*
 
           cat $GITHUB_WORKSPACE/Simple/Config/$WRT_TARGET.txt >> .config
-          echo "outside: $WRT_TAG"
           bash $GITHUB_WORKSPACE/Simple/Scripts/Settings.sh
 
           make -j $(($(nproc)+1)) defconfig V=sc
@@ -235,16 +232,6 @@ jobs:
 
           if [[ $WRT_TEST != 'true' ]]; then
             find ./bin/targets/ -iregex ".*\(json\|manifest\|packages\)$" -exec rm -rf {} +
-
-            for TYPE in $WRT_TYPE ; do
-              for FILE in $(find ./bin/targets/ -type f -iname "*$TYPE*.*") ; do
-                EXT=$(basename $FILE | cut -d '.' -f 2-)
-                NAME=$(basename $FILE | cut -d '.' -f 1 | grep -io "\($TYPE\).*")
-                NEW_FILE="$WRT_VER"_"$NAME"_"$F_DATE"."$EXT"
-                mv -f $FILE ./upload/$NEW_FILE
-              done
-            done
-
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
           fi
           
