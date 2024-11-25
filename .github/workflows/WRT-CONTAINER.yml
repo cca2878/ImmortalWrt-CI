@@ -109,7 +109,7 @@ jobs:
         shell: bash
         run: |
           export WRT_DATE=$(date -Iseconds)
-          export F_DATE=$(date +"%y%m%d_%H%M%S")
+          export F_DATE=$(date +"%y%m%dT%H%M%S")
           export WRT_VER=$(echo $WRT_REPO | sed 's/\//-/g')'_'$WRT_BRANCH
           
           if [ $WRT_TAGCONF ]; then
