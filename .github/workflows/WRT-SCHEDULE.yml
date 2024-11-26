@@ -15,6 +15,6 @@ jobs:
       WRT_REPO: 'immortalwrt/immortalwrt'
       WRT_BRANCH: 'openwrt-24.10'
       WRT_CONF: 'x86_noPIE'
-      WRT_CACHE: 'false'
-      WRT_TAGCONF: 'false'
-      WRT_TEST: 'false'
+      WRT_CACHE: false
+      WRT_TAGCONF: false
+      WRT_TEST: false
