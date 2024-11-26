@@ -1,0 +1,20 @@
+#定期自动编译
+name: WRT-SCHEDULE
+
+#CI计划
+on:
+  workflow_dispatch:
+  schedule:
+    - cron:  '0 21 * * *'
+
+#CI任务
+jobs:
+  schedule:
+    uses: ./.github/workflows/WRT-CONTAINER.yml
+    with:
+      WRT_REPO: 'immortalwrt/immortalwrt'
+      WRT_BRANCH: 'openwrt-24.10'
+      WRT_CONF: 'x86_noPIE'
+      WRT_CACHE: 'false'
+      WRT_TAGCONF: 'false'
+      WRT_TEST: 'false'
