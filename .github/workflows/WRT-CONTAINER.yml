@@ -112,7 +112,7 @@ jobs:
           export F_DATE=$(date +"%y%m%dT%H%M%S")
           export WRT_VER=$(echo $WRT_REPO | sed 's/\//-/g')'_'$WRT_BRANCH
           
-          if [ $WRT_TAGCONF ]; then
+          if [ $WRT_TAGCONF == true ]; then
             export WRT_TAG=$WRT_CONF'_'$WRT_DATE
           else
             export WRT_TAG='build_'$WRT_DATE
