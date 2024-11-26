@@ -104,23 +104,6 @@ jobs:
           echo "User: $(whoami)"
           echo "Time: $(date -Iseconds)"
           echo "========================"
-          
-      - name: Initialize Values
-        shell: bash
-        run: |
-          export WRT_DATE=$(date -Iseconds)
-          export F_DATE=$(date +"%y%m%dT%H%M%S")
-          export WRT_VER=$(echo $WRT_REPO | sed 's/\//-/g')'_'$WRT_BRANCH
-          
-          if [ $WRT_TAGCONF == true ]; then
-            export WRT_TAG=$WRT_CONF'_'$WRT_DATE
-          else
-            export WRT_TAG='build_'$WRT_DATE
-          fi
-
-          echo "WRT_TAG=$WRT_TAG" >> $GITHUB_ENV
-          echo "F_DATE=$F_DATE" >> $GITHUB_ENV
-          echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
 
       - name: Checkout CI Code
         uses: actions/checkout@v4
@@ -133,6 +116,21 @@ jobs:
           repository: ${{env.WRT_REPO}}
           ref: ${{env.WRT_BRANCH}}
           path: ${{env.PATH_SRC}}
+
+      - name: Initialize Values
+        shell: bash
+        run: |
+          if [ $WRT_TAGCONF == true ]; then
+            export WRT_TAG=$WRT_CONF'_'$(date -Iseconds)
+          else
+            export WRT_TAG='build_'$(date -Iseconds)
+          fi
+          echo "WRT_TAG=$WRT_TAG" >> $GITHUB_ENV
+
+          export F_DATE=$(date +"%y%m%dT%H%M%S")
+          export WRT_VER=$(echo $WRT_REPO | sed 's/\//-/g')'_'$WRT_BRANCH
+          echo "F_DATE=$F_DATE" >> $GITHUB_ENV
+          echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
 
       - name: Check Code
         shell: bash
