@@ -19,21 +19,21 @@ on:
       WRT_CACHE:
         description: '使用Cache'
         default: false
-        required: true
+        required: false
         type: boolean
       WRT_TAGCONF:
         description: 'Tag使用的Conf'
         default: false
-        required: true
+        required: false
         type: boolean
       WRT_TEST:
         description: '仅生成Conf'
         default: false
-        required: true
+        required: false
         type: boolean
       PATH_MOUNT:
         default: '/volume_mnt'
-        required: true
+        required: false
         type: string
         
   workflow_dispatch:
