@@ -2,6 +2,40 @@
 name: WRT-CONTAINER
 
 on:
+  workflow_call:
+    inputs:
+      WRT_REPO:
+        default: 'immortalwrt/immortalwrt'
+        required: true
+        type: string
+      WRT_BRANCH:
+        default: 'master'
+        required: true
+        type: string
+      WRT_CONF:
+        default: 'x86'
+        required: true
+        type: string
+      WRT_CACHE:
+        description: '使用Cache'
+        default: false
+        required: true
+        type: boolean
+      WRT_TAGCONF:
+        description: 'Tag使用的Conf'
+        default: false
+        required: true
+        type: boolean
+      WRT_TEST:
+        description: '仅生成Conf'
+        default: false
+        required: true
+        type: boolean
+      PATH_MOUNT:
+        default: '/volume_mnt'
+        required: true
+        type: string
+        
   workflow_dispatch:
     inputs:
       WRT_REPO:
@@ -18,17 +52,17 @@ on:
         type: string
       WRT_CACHE:
         description: '使用Cache'
-        default: 'false'
+        default: false
         required: true
         type: boolean
       WRT_TAGCONF:
         description: 'Tag使用的Conf'
-        default: 'false'
+        default: false
         required: true
         type: boolean
       WRT_TEST:
         description: '仅生成Conf'
-        default: 'false'
+        default: false
         required: true
         type: boolean
       PATH_MOUNT:
