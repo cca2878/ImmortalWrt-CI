@@ -22,3 +22,10 @@ jobs:
       WRT_REPO: 'immortalwrt/immortalwrt'
       WRT_BRANCH: 'openwrt-24.10'
       WRT_CONF: 'x86'
+
+  build_erx:
+    uses: ./.github/workflows/WRT-CONTAINER.yml
+    with:
+      WRT_REPO: 'immortalwrt/immortalwrt'
+      WRT_BRANCH: 'openwrt-24.10'
+      WRT_CONF: 'mips_erx_noPIE'
