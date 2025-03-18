@@ -1,0 +1,285 @@
+#ARM64机器编译测试
+name: WRT-ARM64TEST
+
+on:
+  workflow_call:
+    inputs:
+      WRT_REPO:
+        default: 'immortalwrt/immortalwrt'
+        required: true
+        type: string
+      WRT_BRANCH:
+        default: 'master'
+        required: true
+        type: string
+      WRT_CONF:
+        default: 'x86'
+        required: true
+        type: string
+      WRT_CACHE:
+        description: '使用Cache'
+        default: false
+        required: false
+        type: boolean
+      WRT_TAGCONF:
+        description: 'Tag使用的Conf'
+        default: false
+        required: false
+        type: boolean
+      WRT_TEST:
+        description: '仅生成Conf'
+        default: false
+        required: false
+        type: boolean
+      PATH_MOUNT:
+        default: '/volume_mnt'
+        required: false
+        type: string
+        
+  workflow_dispatch:
+    inputs:
+      WRT_REPO:
+        default: 'immortalwrt/immortalwrt'
+        required: true
+        type: string
+      WRT_BRANCH:
+        default: 'master'
+        required: true
+        type: string
+      WRT_CONF:
+        default: 'x86'
+        required: true
+        type: string
+      WRT_CACHE:
+        description: '使用Cache'
+        default: false
+        required: true
+        type: boolean
+      WRT_TAGCONF:
+        description: 'Tag使用的Conf'
+        default: false
+        required: true
+        type: boolean
+      WRT_TEST:
+        description: '仅生成Conf'
+        default: false
+        required: true
+        type: boolean
+      PATH_MOUNT:
+        default: '/volume_mnt'
+        required: true
+        type: string
+
+env:
+  PATH_MOUNT: ${{inputs.PATH_MOUNT}}
+  PATH_WORKDIR: ${{inputs.PATH_MOUNT}}/work
+  PATH_CI: ci
+  PATH_SRC: opwrt_src
+  
+  WRT_CONF: ${{inputs.WRT_CONF}}
+  WRT_TAGCONF: ${{inputs.WRT_TAGCONF}}
+  WRT_REPO: ${{inputs.WRT_REPO}}
+  WRT_BRANCH: ${{inputs.WRT_BRANCH}}
+  WRT_TEST: ${{inputs.WRT_TEST}}
+  WRT_CACHE: ${{inputs.WRT_CACHE}}
+
+jobs:
+  core:
+    name: ARM64TEST_${{inputs.WRT_REPO}}_${{inputs.WRT_CONF}}
+    runs-on: ubuntu-24.04-arm
+    container: 
+      image: ubuntu:latest
+      volumes:
+        - /mnt:${{inputs.PATH_MOUNT}}
+      options: --env TZ=Asia/Shanghai
+    defaults:
+      run:
+        shell: su ubuntu -c "bash {0}"
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Initialize Syetem
+        shell: bash
+        run: |
+          apt -yqq update
+          apt -yqq install tzdata sudo git dos2unix curl
+          
+          ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+          dpkg-reconfigure --frontend noninteractive tzdata
+          passwd -d ubuntu
+          if [ -d $PATH_WORKDIR ]; then
+            rm -rf $PATH_WORKDIR
+          fi
+          mkdir $PATH_WORKDIR
+          chmod -R 775 $PATH_WORKDIR
+          chown -R ubuntu $PATH_WORKDIR
+      
+      - name: Free disk space
+        shell: bash
+        if: false
+        run: |
+          echo "Removing Android, .Net, Haskell, Tool Cache..."
+          echo "- Android: $(rm -rfv $HOST_ROOT/usr/local/lib/android 2>&1 | grep "removed" | wc -l) files removed."
+          echo "- .Net: $(rm -rfv $HOST_ROOT/usr/share/dotnet 2>&1 | grep "removed" | wc -l) files removed."
+          echo "- Haskell: $(rm -rfv $HOST_ROOT/opt/ghc /host_root/usr/local/.ghcup 2>&1 | grep "removed" | wc -l) files removed."
+          echo "- Tool Cache: $(rm -rfv $HOST_ROOT/opt/hostedtoolcache 2>&1 | grep "removed" | wc -l) files removed."
+          echo "Removing Custom Folder..."
+          echo "- Custom Folder: $(rm -rfv $HOST_ROOT/usr/share/swift $HOST_ROOT/usr/share/miniconda $HOST_ROOT/usr/share/az* $HOST_ROOT/usr/local/lib/node_modules $HOST_ROOT/usr/local/share/chromium $HOST_ROOT/usr/local/share/powershell 2>&1 | grep "removed" | wc -l) files removed."
+
+      - name: Container Information
+        run: |
+          echo "=====Container=Info====="
+          sudo lscpu | grep -E "name|Core|Thread"
+          echo "========================"
+          sudo df -h
+          echo "========================"
+          sudo du -h --max-depth=1
+          echo "========================"
+          echo "User: $(whoami)"
+          echo "Time: $(date -Iseconds)"
+          echo "========================"
+
+      - name: Checkout CI Code
+        uses: actions/checkout@v4
+        with:
+          path: ${{env.PATH_CI}}
+          
+      - name: Checkout Src Code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{env.WRT_REPO}}
+          ref: ${{env.WRT_BRANCH}}
+          path: ${{env.PATH_SRC}}
+
+      - name: Initialize Values
+        shell: bash
+        run: |
+          if [ $WRT_TAGCONF == true ]; then
+            export WRT_TAG=$WRT_CONF'_'$(date -Iseconds)
+          else
+            export WRT_TAG='build_'$(date -Iseconds)
+          fi
+          echo "WRT_TAG=$WRT_TAG" >> $GITHUB_ENV
+
+          export F_DATE=$(date +"%y%m%dT%H%M%S")
+          export WRT_VER=$(echo $WRT_REPO | sed 's/\//-/g')'_'$WRT_BRANCH
+          echo "F_DATE=$F_DATE" >> $GITHUB_ENV
+          echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
+
+      - name: Check Code
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/$PATH_SRC 
+          echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
+          echo "Hash: $(git log -1 --pretty=format:'%h')"
+      
+      - name: Prepare Code
+        run: |
+          cp -r $GITHUB_WORKSPACE/$PATH_CI $PATH_WORKDIR/$PATH_CI
+          cp -r $GITHUB_WORKSPACE/$PATH_SRC $PATH_WORKDIR/$PATH_SRC
+          sudo rm -rf $GITHUB_WORKSPACE/$PATH_CI
+          sudo rm -rf $GITHUB_WORKSPACE/$PATH_SRC
+        
+          find $PATH_WORKDIR/$PATH_CI -type f -iregex '.*(txt|sh)$' -exec dos2unix {} \; -exec chmod 777 {} \;
+
+      - name: Initialize Environment
+        run: |
+          sudo apt -yqq full-upgrade        
+          sudo apt -yqq autoremove --purge
+          sudo apt -yqq autoclean
+          sudo apt -yqq clean
+
+          sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+
+      - name: Check Caches
+        id: check-cache
+        if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
+        uses: actions/cache@main
+        with:
+          key: ${{env.WRT_VER}}-${{env.WRT_CONF}}-${{env.WRT_HASH}}
+          path: |
+            $PATH_WORKDIR/$PATH_SRC/.ccache
+            $PATH_WORKDIR/$PATH_SRC/staging_dir/host*
+            $PATH_WORKDIR/$PATH_SRC/staging_dir/tool*
+
+      - name: Update Caches
+        if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
+        run: |
+          if ${{steps.check-cache.outputs.cache-hit == 'true'}}; then
+            sed -i 's/ $(tool.*\/stamp-compile)//g' $PATH_WORKDIR/$PATH_SRC/Makefile
+            sed -i 's/ $(tool.*\/stamp-install)//g' $PATH_WORKDIR/$PATH_SRC/Makefile
+
+            echo "toolchain skiped done!"
+          else
+            gh extension install actions/gh-actions-cache
+
+            CACHE_LIST=$(gh actions-cache list --key "$WRT_VER-$WRT_CONF" | cut -f 1)
+            for CACHE_KEY in $CACHE_LIST; do
+               gh actions-cache delete $CACHE_KEY --confirm
+            done
+
+            echo "caches cleanup done!"
+          fi
+
+      - name: Custom Feeds
+        run: |
+          cd $PATH_WORKDIR/$PATH_SRC
+          
+          cat $PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt >> feeds.conf.default
+          cat feeds.conf.default
+
+      - name: Update Feeds
+        run: |
+          cd $PATH_WORKDIR/$PATH_SRC
+
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Custom Packages
+        run: |
+          cd $PATH_WORKDIR/$PATH_SRC/package/
+
+          bash $PATH_WORKDIR/$PATH_CI/Simple/Scripts/Packages.sh
+          bash $PATH_WORKDIR/$PATH_CI/Simple/Scripts/Handles.sh
+
+      - name: Custom Settings
+        run: |
+          cd $PATH_WORKDIR/$PATH_SRC
+
+          rm -rf ./tmp* ./.config*
+
+          cat $PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt >> .config
+          bash $PATH_WORKDIR/$PATH_CI/Simple/Scripts/Settings.sh
+
+          make -j $(($(nproc)+1)) defconfig V=sc
+
+      - name: Download Packages
+        if: env.WRT_TEST != 'true'
+        run: |
+          cd $PATH_WORKDIR/$PATH_SRC
+          make -j $(($(nproc)+1)) download V=w
+
+      - name: Compile Firmware
+        if: env.WRT_TEST != 'true'
+        run: |
+          cd $PATH_WORKDIR/$PATH_SRC
+
+          make -j $(($(nproc)+1)) V=w || make -j 1 V=sc
+
+      - name: Package Firmware
+        run: |
+          cd $PATH_WORKDIR/$PATH_SRC && mkdir ./upload
+
+          cp -f ./.config ./upload/config_"$WRT_VER"_"$WRT_CONF"_"$F_DATE".txt
+
+          if [[ $WRT_TEST != 'true' ]]; then
+            find ./bin/targets/ -iregex ".*\(json\|manifest\|packages\)$" -exec rm -rf {} +
+            find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
+          fi
+          
+      - name: Upload Firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{env.WRT_VER}}_${{env.WRT_CONF}}_${{env.F_DATE}}
+          path: ${{env.PATH_WORKDIR}}/${{env.PATH_SRC}}/upload/*
+          if-no-files-found: error
