@@ -189,7 +189,7 @@ jobs:
           sudo apt -yqq autoclean
           sudo apt -yqq clean
 
-          sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh | sed "/uname -m.*x86_64/s|^|#|")'
 
       - name: Check Caches
         id: check-cache
