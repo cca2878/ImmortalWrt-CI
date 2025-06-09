@@ -98,21 +98,29 @@ jobs:
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
-      - name: Initialize Syetem
+      - name: Initialize System
         shell: bash
         run: |
+          echo "=====Initializing System====="
           apt -yqq update
           apt -yqq install tzdata sudo git dos2unix curl
           
+          echo "Setting timezone to Asia/Shanghai..."
           ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
           dpkg-reconfigure --frontend noninteractive tzdata
+          
+          echo "Configuring ubuntu user..."
           passwd -d ubuntu
+          
+          echo "Setting up work directory..."
           if [ -d $PATH_WORKDIR ]; then
+            echo "Removing existing work directory..."
             rm -rf $PATH_WORKDIR
           fi
           mkdir $PATH_WORKDIR
           chmod -R 775 $PATH_WORKDIR
           chown -R ubuntu $PATH_WORKDIR
+          echo "System initialization completed!"
       
       - name: Free disk space
         shell: bash
@@ -124,19 +132,33 @@ jobs:
           echo "- Haskell: $(rm -rfv $HOST_ROOT/opt/ghc /host_root/usr/local/.ghcup 2>&1 | grep "removed" | wc -l) files removed."
           echo "- Tool Cache: $(rm -rfv $HOST_ROOT/opt/hostedtoolcache 2>&1 | grep "removed" | wc -l) files removed."
           echo "Removing Custom Folder..."
-          echo "- Custom Folder: $(rm -rfv $HOST_ROOT/usr/share/swift $HOST_ROOT/usr/share/miniconda $HOST_ROOT/usr/share/az* $HOST_ROOT/usr/local/lib/node_modules $HOST_ROOT/usr/local/share/chromium $HOST_ROOT/usr/local/share/powershell 2>&1 | grep "removed" | wc -l) files removed."
+          echo "- Custom Folder: $(rm -rfv $HOST_ROOT/usr/share/swift $HOST_ROOT/usr/share/miniconda $HOST_ROOT/usr/share/az* $HOST_ROOT/usr/local/lib/node_modules $HOST_ROOT/usr/local/share/chro*)"
 
       - name: Container Information
         run: |
-          echo "=====Container=Info====="
-          sudo lscpu | grep -E "name|Core|Thread"
-          echo "========================"
+          echo "=====Container=Information====="
+          echo "CPU Information:"
+          sudo lscpu | grep -E "name|Core|Thread|CPU"
+          echo ""
+          echo "Memory Information:"
+          echo "Total Memory: $(free -h | awk 'NR==2{printf "%.1fGB", $2/1024}')"
+          echo "Available Memory: $(free -h | awk 'NR==2{printf "%.1fGB", $4/1024}')"
+          free -h | head -2
+          echo ""
+          echo "Disk Usage:"
           sudo df -h
-          echo "========================"
-          sudo du -h --max-depth=1
-          echo "========================"
+          echo ""
+          echo "Directory Usage:"
+          sudo du -h --max-depth=1 /
+          echo ""
+          echo "Environment Information:"
           echo "User: $(whoami)"
           echo "Time: $(date -Iseconds)"
+          echo "Repository: $WRT_REPO"
+          echo "Branch: $WRT_BRANCH"
+          echo "Configuration: $WRT_CONF"
+          echo "Test Mode: $WRT_TEST"
+          echo "Cache Enabled: $WRT_CACHE"
           echo "========================"
 
       - name: Checkout CI Code
@@ -144,7 +166,7 @@ jobs:
         with:
           path: ${{env.PATH_CI}}
           
-      - name: Checkout Src Code
+      - name: Checkout Source Code
         uses: actions/checkout@v4
         with:
           repository: ${{env.WRT_REPO}}
@@ -154,10 +176,13 @@ jobs:
       - name: Initialize Values
         shell: bash
         run: |
+          echo "=====Initializing Build Values====="
           if [ $WRT_TAGCONF == true ]; then
             export WRT_TAG=$WRT_CONF'_'$(date -Iseconds)
+            echo "Using configuration-based tag: $WRT_TAG"
           else
             export WRT_TAG='build_'$(date -Iseconds)
+            echo "Using build-based tag: $WRT_TAG"
           fi
           echo "WRT_TAG=$WRT_TAG" >> $GITHUB_ENV
 
@@ -165,31 +190,49 @@ jobs:
           export WRT_VER=$(echo $WRT_REPO | sed 's/\//-/g')'_'$WRT_BRANCH
           echo "F_DATE=$F_DATE" >> $GITHUB_ENV
           echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
+          echo "Build date: $F_DATE"
+          echo "Version string: $WRT_VER"
 
-      - name: Check Code
+      - name: Check Source Code
         shell: bash
         run: |
+          echo "=====Checking Source Code====="
           cd $GITHUB_WORKSPACE/$PATH_SRC 
-          echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
-          echo "Hash: $(git log -1 --pretty=format:'%h')"
+          HASH=$(git log -1 --pretty=format:'%h')
+          echo "WRT_HASH=$HASH" >> $GITHUB_ENV
+          echo "Source Hash: $HASH"
+          echo "Latest Commit: $(git log -1 --pretty=format:'%s')"
+          echo "Commit Author: $(git log -1 --pretty=format:'%an')"
+          echo "Commit Date: $(git log -1 --pretty=format:'%cd')"
       
-      - name: Prepare Code
+      - name: Prepare Source Code
         run: |
+          echo "=====Preparing Source Code====="
+          echo "Copying CI scripts to work directory..."
           cp -r $GITHUB_WORKSPACE/$PATH_CI $PATH_WORKDIR/$PATH_CI
+          echo "Copying source code to work directory..."
           cp -r $GITHUB_WORKSPACE/$PATH_SRC $PATH_WORKDIR/$PATH_SRC
+          
+          echo "Cleaning up GitHub workspace..."
           sudo rm -rf $GITHUB_WORKSPACE/$PATH_CI
           sudo rm -rf $GITHUB_WORKSPACE/$PATH_SRC
         
+          echo "Setting file permissions..."
           find $PATH_WORKDIR/$PATH_CI -type f -iregex '.*(txt|sh)$' -exec dos2unix {} \; -exec chmod 777 {} \;
+          echo "Source code preparation completed!"
 
-      - name: Initialize Environment
+      - name: Initialize Build Environment
         run: |
+          echo "=====Initializing Build Environment====="
+          echo "Upgrading system packages..."
           sudo apt -yqq full-upgrade        
           sudo apt -yqq autoremove --purge
           sudo apt -yqq autoclean
           sudo apt -yqq clean
 
+          echo "Installing ImmortalWrt build environment..."
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          echo "Build environment initialized!"
 
       - name: Check Caches
         id: check-cache
@@ -205,77 +248,132 @@ jobs:
       - name: Update Caches
         if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
         run: |
+          echo "=====Managing Caches====="
           if ${{steps.check-cache.outputs.cache-hit == 'true'}}; then
+            echo "Cache hit! Skipping toolchain compilation..."
             sed -i 's/ $(tool.*\/stamp-compile)//g' $PATH_WORKDIR/$PATH_SRC/Makefile
             sed -i 's/ $(tool.*\/stamp-install)//g' $PATH_WORKDIR/$PATH_SRC/Makefile
-
-            echo "toolchain skiped done!"
+            echo "Toolchain skip configured!"
           else
+            echo "No cache found, cleaning up old caches..."
             gh extension install actions/gh-actions-cache
 
             CACHE_LIST=$(gh actions-cache list --key "$WRT_VER-$WRT_CONF" | cut -f 1)
             for CACHE_KEY in $CACHE_LIST; do
                gh actions-cache delete $CACHE_KEY --confirm
             done
-
-            echo "caches cleanup done!"
+            echo "Old caches cleaned up!"
           fi
 
       - name: Custom Feeds
         run: |
+          echo "=====Configuring Custom Feeds====="
           cd $PATH_WORKDIR/$PATH_SRC
           
+          echo "Adding custom feeds for $WRT_CONF..."
           cat $PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt >> feeds.conf.default
+          echo "Current feeds configuration:"
           cat feeds.conf.default
 
       - name: Update Feeds
         run: |
+          echo "=====Updating Feeds====="
           cd $PATH_WORKDIR/$PATH_SRC
 
+          echo "Updating all feeds..."
           ./scripts/feeds update -a
+          echo "Installing all feeds..."
           ./scripts/feeds install -a
+          echo "Feeds update completed!"
 
       - name: Custom Packages
         run: |
+          echo "=====Configuring Custom Packages====="
           cd $PATH_WORKDIR/$PATH_SRC/package/
 
+          echo "Running custom packages script..."
           bash $PATH_WORKDIR/$PATH_CI/Simple/Scripts/Packages.sh
+          echo "Running custom handles script..."
           bash $PATH_WORKDIR/$PATH_CI/Simple/Scripts/Handles.sh
+          echo "Custom packages configuration completed!"
 
       - name: Custom Settings
         run: |
+          echo "=====Applying Custom Settings====="
           cd $PATH_WORKDIR/$PATH_SRC
 
+          echo "Cleaning temporary files..."
           rm -rf ./tmp* ./.config*
 
+          echo "Applying configuration for $WRT_CONF..."
           cat $PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt >> .config
+          echo "Running custom settings script..."
           bash $PATH_WORKDIR/$PATH_CI/Simple/Scripts/Settings.sh
 
+          echo "Generating default configuration..."
           make -j $(($(nproc)+1)) defconfig V=sc
+          echo "Custom settings applied!"
 
       - name: Download Packages
         if: env.WRT_TEST != 'true'
         run: |
+          echo "=====Downloading Packages====="
           cd $PATH_WORKDIR/$PATH_SRC
+          echo "Downloading with $(nproc) parallel jobs..."
           make -j $(($(nproc)+1)) download V=w
+          echo "Package download completed!"
 
-      - name: Compile Firmware
+      - name: Compile Firmware (Multi-threaded)
         if: env.WRT_TEST != 'true'
+        id: compile-mt
+        continue-on-error: true
         run: |
+          echo "=====Compiling Firmware (Multi-threaded)====="
           cd $PATH_WORKDIR/$PATH_SRC
+          echo "Starting multi-threaded compilation with $(($(nproc)+1)) jobs..."
+          echo "Compilation started at: $(date -Iseconds)"
+          
+          if make -j $(($(nproc)+1)) V=w; then
+            echo "COMPILE_SUCCESS=true" >> $GITHUB_ENV
+            echo "Multi-threaded compilation completed successfully!"
+          else
+            echo "COMPILE_SUCCESS=false" >> $GITHUB_ENV
+            echo "Multi-threaded compilation failed, will retry with single thread for detailed error analysis."
+            exit 1
+          fi
 
-          make -j $(($(nproc)+1)) V=w || make -j 1 V=sc
+      - name: Compile Firmware (Single-threaded for Error Analysis)
+        if: env.WRT_TEST != 'true' && env.COMPILE_SUCCESS == 'false'
+        run: |
+          echo "=====Compiling Firmware (Single-threaded for Error Analysis)====="
+          cd $PATH_WORKDIR/$PATH_SRC
+          echo "Starting single-threaded compilation for detailed error analysis..."
+          echo "This will provide more detailed error information."
+          echo "Single-threaded compilation started at: $(date -Iseconds)"
+          
+          make -j 1 V=sc
+          echo "Single-threaded compilation completed!"
 
       - name: Package Firmware
         run: |
+          echo "=====Packaging Firmware====="
           cd $PATH_WORKDIR/$PATH_SRC && mkdir ./upload
 
+          echo "Copying configuration file..."
           cp -f ./.config ./upload/config_"$WRT_VER"_"$WRT_CONF"_"$F_DATE".txt
 
           if [[ $WRT_TEST != 'true' ]]; then
+            echo "Packaging firmware files..."
+            echo "Removing unnecessary files..."
             find ./bin/targets/ -iregex ".*\(json\|manifest\|packages\)$" -exec rm -rf {} +
+            echo "Moving firmware files to upload directory..."
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
+            echo "Firmware files:"
+            ls -la ./upload/
+          else
+            echo "Test mode: only configuration file will be uploaded."
           fi
+          echo "Packaging completed!"
           
       - name: Upload Firmware
         uses: actions/upload-artifact@v4
