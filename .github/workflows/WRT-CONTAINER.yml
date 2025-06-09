@@ -136,30 +136,21 @@ jobs:
 
       - name: Container Information
         run: |
-          echo "=====Container=Information====="
-          echo "CPU Information:"
-          sudo lscpu | grep -E "name|Core|Thread|CPU"
+          echo "========================================"
+          echo "         CONTAINER INFORMATION"
+          echo "========================================"
+          echo "CPU: $(nproc) cores | $(lscpu | grep 'Model name' | cut -d':' -f2 | xargs)"
+          echo "Memory: $(free -h | awk 'NR==2{printf "%s total, %s available", $2, $7}')"
+          echo "Disk: $(df -h / | awk 'NR==2{printf "%s used / %s total (%s)", $3, $2, $5}')"
           echo ""
-          echo "Memory Information:"
-          echo "Total Memory: $(free -h | awk 'NR==2{printf "%.1fGB", $2/1024}')"
-          echo "Available Memory: $(free -h | awk 'NR==2{printf "%.1fGB", $4/1024}')"
-          free -h | head -2
-          echo ""
-          echo "Disk Usage:"
-          sudo df -h
-          echo ""
-          echo "Directory Usage:"
-          sudo du -h --max-depth=1 /
-          echo ""
-          echo "Environment Information:"
-          echo "User: $(whoami)"
-          echo "Time: $(date -Iseconds)"
-          echo "Repository: $WRT_REPO"
-          echo "Branch: $WRT_BRANCH"
-          echo "Configuration: $WRT_CONF"
-          echo "Test Mode: $WRT_TEST"
-          echo "Cache Enabled: $WRT_CACHE"
-          echo "========================"
+          echo "Build Configuration:"
+          echo "- Repository: $WRT_REPO"
+          echo "- Branch: $WRT_BRANCH"
+          echo "- Config: $WRT_CONF"
+          echo "- Test Mode: $WRT_TEST"
+          echo "- Cache: $WRT_CACHE"
+          echo "- Time: $(date -Iseconds)"
+          echo "========================================"
 
       - name: Checkout CI Code
         uses: actions/checkout@v4
@@ -333,26 +324,40 @@ jobs:
           echo "Starting multi-threaded compilation with $(($(nproc)+1)) jobs..."
           echo "Compilation started at: $(date -Iseconds)"
           
-          if make -j $(($(nproc)+1)) V=w; then
-            echo "COMPILE_SUCCESS=true" >> $GITHUB_ENV
-            echo "Multi-threaded compilation completed successfully!"
-          else
-            echo "COMPILE_SUCCESS=false" >> $GITHUB_ENV
-            echo "Multi-threaded compilation failed, will retry with single thread for detailed error analysis."
-            exit 1
-          fi
+          make -j $(($(nproc)+1)) V=w
 
       - name: Compile Firmware (Single-threaded for Error Analysis)
-        if: env.WRT_TEST != 'true' && env.COMPILE_SUCCESS == 'false'
+        if: env.WRT_TEST != 'true' && steps.compile-mt.outcome == 'failure'
         run: |
           echo "=====Compiling Firmware (Single-threaded for Error Analysis)====="
           cd $PATH_WORKDIR/$PATH_SRC
-          echo "Starting single-threaded compilation for detailed error analysis..."
+          echo "Multi-threaded compilation failed, starting single-threaded compilation for detailed error analysis..."
           echo "This will provide more detailed error information."
           echo "Single-threaded compilation started at: $(date -Iseconds)"
           
           make -j 1 V=sc
-          echo "Single-threaded compilation completed!"
+
+      - name: Check Compilation Result
+        if: env.WRT_TEST != 'true'
+        run: |
+          echo "=====Checking Compilation Result====="
+          cd $PATH_WORKDIR/$PATH_SRC
+          
+          if [ "${{ steps.compile-mt.outcome }}" = "success" ]; then
+            echo "✅ Multi-threaded compilation completed successfully!"
+          elif [ "${{ steps.compile-mt.outcome }}" = "failure" ]; then
+            echo "⚠️  Multi-threaded compilation failed, but single-threaded compilation may have succeeded."
+            echo "Please check the logs above for detailed error information."
+            
+            # 检查是否有编译产物来判断单线程编译是否成功
+            if find ./bin/targets/ -name "*.bin" -o -name "*.img" -o -name "*.tar" 2>/dev/null | grep -q .; then
+              echo "✅ Single-threaded compilation produced firmware files."
+            else
+              echo "❌ Single-threaded compilation also failed - no firmware files found."
+              echo "::warning::Compilation completed with errors - please check logs for details"
+              exit 1
+            fi
+          fi
 
       - name: Package Firmware
         run: |
