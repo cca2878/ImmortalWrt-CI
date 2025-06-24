@@ -12,6 +12,11 @@ on:
         default: 'master'
         required: true
         type: string
+      WRT_COMMIT:
+        description: '指定源码Commit (留空使用最新)'
+        default: ''
+        required: false
+        type: string
       WRT_CONF:
         default: 'x86'
         required: true
@@ -45,6 +50,11 @@ on:
       WRT_BRANCH:
         default: 'master'
         required: true
+        type: string
+      WRT_COMMIT:
+        description: '指定源码Commit (留空使用最新)'
+        default: ''
+        required: false
         type: string
       WRT_CONF:
         default: 'x86'
@@ -80,6 +90,7 @@ env:
   WRT_TAGCONF: ${{inputs.WRT_TAGCONF}}
   WRT_REPO: ${{inputs.WRT_REPO}}
   WRT_BRANCH: ${{inputs.WRT_BRANCH}}
+  WRT_COMMIT: ${{inputs.WRT_COMMIT}}
   WRT_TEST: ${{inputs.WRT_TEST}}
   WRT_CACHE: ${{inputs.WRT_CACHE}}
 
@@ -121,18 +132,6 @@ jobs:
           chmod -R 775 $PATH_WORKDIR
           chown -R ubuntu $PATH_WORKDIR
           echo "System initialization completed!"
-      
-      - name: Free disk space
-        shell: bash
-        if: false
-        run: |
-          echo "Removing Android, .Net, Haskell, Tool Cache..."
-          echo "- Android: $(rm -rfv $HOST_ROOT/usr/local/lib/android 2>&1 | grep "removed" | wc -l) files removed."
-          echo "- .Net: $(rm -rfv $HOST_ROOT/usr/share/dotnet 2>&1 | grep "removed" | wc -l) files removed."
-          echo "- Haskell: $(rm -rfv $HOST_ROOT/opt/ghc /host_root/usr/local/.ghcup 2>&1 | grep "removed" | wc -l) files removed."
-          echo "- Tool Cache: $(rm -rfv $HOST_ROOT/opt/hostedtoolcache 2>&1 | grep "removed" | wc -l) files removed."
-          echo "Removing Custom Folder..."
-          echo "- Custom Folder: $(rm -rfv $HOST_ROOT/usr/share/swift $HOST_ROOT/usr/share/miniconda $HOST_ROOT/usr/share/az* $HOST_ROOT/usr/local/lib/node_modules $HOST_ROOT/usr/local/share/chro*)"
 
       - name: Container Information
         run: |
@@ -146,6 +145,7 @@ jobs:
           echo "Build Configuration:"
           echo "- Repository: $WRT_REPO"
           echo "- Branch: $WRT_BRANCH"
+          echo "- Commit: ${WRT_COMMIT:-'latest'}"
           echo "- Config: $WRT_CONF"
           echo "- Test Mode: $WRT_TEST"
           echo "- Cache: $WRT_CACHE"
@@ -163,6 +163,8 @@ jobs:
           repository: ${{env.WRT_REPO}}
           ref: ${{env.WRT_BRANCH}}
           path: ${{env.PATH_SRC}}
+          # 获取完整历史以支持指定commit
+          fetch-depth: 0
 
       - name: Initialize Values
         shell: bash
@@ -184,18 +186,48 @@ jobs:
           echo "Build date: $F_DATE"
           echo "Version string: $WRT_VER"
 
-      - name: Check Source Code
+      - name: Check and Switch Source Code
         shell: bash
         run: |
-          echo "=====Checking Source Code====="
-          cd $GITHUB_WORKSPACE/$PATH_SRC 
+          echo "=====Checking and Switching Source Code====="
+          cd $GITHUB_WORKSPACE/$PATH_SRC
+          
+          # 显示当前状态
+          echo "Current branch: $(git branch --show-current)"
+          echo "Latest commit on branch: $(git log -1 --pretty=format:'%h - %s (%an, %ar)')"
+          
+          # 如果指定了commit，则切换到该commit
+          if [ -n "$WRT_COMMIT" ]; then
+            echo "🎯 Switching to specified commit: $WRT_COMMIT"
+            
+            # 验证commit是否存在
+            if git cat-file -e "$WRT_COMMIT^{commit}" 2>/dev/null; then
+              git checkout "$WRT_COMMIT"
+              echo "✅ Successfully switched to commit: $WRT_COMMIT"
+            else
+              echo "❌ Error: Commit '$WRT_COMMIT' not found in repository"
+              echo "Available recent commits:"
+              git log --oneline -10
+              exit 1
+            fi
+          else
+            echo "📍 Using latest commit on branch $WRT_BRANCH"
+          fi
+          
+          # 获取最终使用的commit hash
           HASH=$(git log -1 --pretty=format:'%h')
+          FULL_HASH=$(git log -1 --pretty=format:'%H')
           echo "WRT_HASH=$HASH" >> $GITHUB_ENV
-          echo "Source Hash: $HASH"
-          echo "Latest Commit: $(git log -1 --pretty=format:'%s')"
-          echo "Commit Author: $(git log -1 --pretty=format:'%an')"
-          echo "Commit Date: $(git log -1 --pretty=format:'%cd')"
-      
+          echo "WRT_FULL_HASH=$FULL_HASH" >> $GITHUB_ENV
+          
+          echo ""
+          echo "=== Final Source Code Information ==="
+          echo "Using commit: $HASH ($FULL_HASH)"
+          echo "Commit message: $(git log -1 --pretty=format:'%s')"
+          echo "Commit author: $(git log -1 --pretty=format:'%an <%ae>')"
+          echo "Commit date: $(git log -1 --pretty=format:'%cd')"
+          echo "=================================="
+
       - name: Prepare Source Code
         run: |
           echo "=====Preparing Source Code====="
@@ -225,35 +257,82 @@ jobs:
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
           echo "Build environment initialized!"
 
+      - name: Generate Cache Key
+        if: ${{ env.WRT_CACHE == 'true' }}
+        shell: bash
+        run: |
+          echo "=====Generating Cache Key====="
+          cd $PATH_WORKDIR/$PATH_SRC
+          
+          # 配置文件内容hash
+          CONFIG_HASH=$(sha256sum $PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt | cut -d' ' -f1 | cut -c1-8)
+          
+          # 使用实际的commit hash (不是分支名)
+          ACTUAL_HASH=$WRT_HASH
+          
+          # 构建cache key
+          CACHE_KEY="${WRT_VER}-${WRT_CONF}-${ACTUAL_HASH}-${CONFIG_HASH}"
+          echo "CACHE_KEY=$CACHE_KEY" >> $GITHUB_ENV
+          
+          echo "Cache key: $CACHE_KEY"
+          echo "- Version: $WRT_VER"
+          echo "- Config: $WRT_CONF"
+          echo "- Commit: $ACTUAL_HASH"
+          echo "- Config hash: $CONFIG_HASH"
+
       - name: Check Caches
         id: check-cache
         if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
-        uses: actions/cache@main
+        uses: actions/cache@v4
         with:
-          key: ${{env.WRT_VER}}-${{env.WRT_CONF}}-${{env.WRT_HASH}}
+          key: ${{env.CACHE_KEY}}
+          restore-keys: |
+            ${{env.WRT_VER}}-${{env.WRT_CONF}}-${{env.WRT_HASH}}-
+            ${{env.WRT_VER}}-${{env.WRT_CONF}}-
           path: |
-            $PATH_WORKDIR/$PATH_SRC/.ccache
-            $PATH_WORKDIR/$PATH_SRC/staging_dir/host*
-            $PATH_WORKDIR/$PATH_SRC/staging_dir/tool*
+            ${{env.PATH_WORKDIR}}/${{env.PATH_SRC}}/.ccache
+            ${{env.PATH_WORKDIR}}/${{env.PATH_SRC}}/staging_dir/host*
+            ${{env.PATH_WORKDIR}}/${{env.PATH_SRC}}/staging_dir/tool*
+            ${{env.PATH_WORKDIR}}/${{env.PATH_SRC}}/staging_dir/target-*
 
-      - name: Update Caches
+      - name: Configure Build Cache
         if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
+        shell: bash
         run: |
-          echo "=====Managing Caches====="
-          if ${{steps.check-cache.outputs.cache-hit == 'true'}}; then
-            echo "Cache hit! Skipping toolchain compilation..."
-            sed -i 's/ $(tool.*\/stamp-compile)//g' $PATH_WORKDIR/$PATH_SRC/Makefile
-            sed -i 's/ $(tool.*\/stamp-install)//g' $PATH_WORKDIR/$PATH_SRC/Makefile
-            echo "Toolchain skip configured!"
+          echo "=====Configuring Build Cache====="
+          cd $PATH_WORKDIR/$PATH_SRC
+          
+          # 配置ccache
+          export CCACHE_DIR="$PWD/.ccache"
+          export CCACHE_COMPRESS="1"
+          echo "CCACHE_DIR=$CCACHE_DIR" >> $GITHUB_ENV
+          echo "CCACHE_COMPRESS=$CCACHE_COMPRESS" >> $GITHUB_ENV
+          
+          if [ "${{ steps.check-cache.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ Cache hit! Using optimized build strategy."
+            echo "BUILD_STRATEGY=fast" >> $GITHUB_ENV
+            
+            # 显示缓存统计
+            ccache -s 2>/dev/null || echo "ccache statistics not available yet"
+            echo "Cached staging directories:"
+            ls -la staging_dir/ 2>/dev/null || echo "staging_dir will be populated"
+            
           else
-            echo "No cache found, cleaning up old caches..."
-            gh extension install actions/gh-actions-cache
-
-            CACHE_LIST=$(gh actions-cache list --key "$WRT_VER-$WRT_CONF" | cut -f 1)
-            for CACHE_KEY in $CACHE_LIST; do
-               gh actions-cache delete $CACHE_KEY --confirm
-            done
-            echo "Old caches cleaned up!"
+            echo "❌ Cache miss. Using standard build strategy."
+            echo "BUILD_STRATEGY=standard" >> $GITHUB_ENV
+            
+            # 清理旧缓存 (只在定时任务时)
+            if [ "${{ github.event_name }}" = "schedule" ]; then
+              echo "Scheduled build: cleaning up old caches..."
+              export GH_TOKEN="${{ github.token }}"
+              gh extension install actions/gh-actions-cache 2>/dev/null || true
+              
+              # 只保留最近3个缓存
+              CACHE_LIST=$(gh actions-cache list --key "${{env.WRT_VER}}-${{env.WRT_CONF}}" --repo "${{ github.repository }}" --limit 10 2>/dev/null | tail -n +4 | cut -f 1 || echo "")
+              for CACHE_KEY_TO_DELETE in $CACHE_LIST; do
+                gh actions-cache delete "$CACHE_KEY_TO_DELETE" --repo "${{ github.repository }}" --confirm 2>/dev/null || true
+              done
+            fi
           fi
 
       - name: Custom Feeds
@@ -262,18 +341,22 @@ jobs:
           cd $PATH_WORKDIR/$PATH_SRC
           
           echo "Adding custom feeds for $WRT_CONF..."
-          cat $PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt >> feeds.conf.default
+          if [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt" ]; then
+            cat $PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt >> feeds.conf.default
+            echo "Custom feeds configuration added."
+          fi
+          
           echo "Current feeds configuration:"
           cat feeds.conf.default
 
-      - name: Update Feeds
+      - name: Update Feeds (Always Fresh)
         run: |
-          echo "=====Updating Feeds====="
+          echo "=====Updating Feeds (Always Fresh)====="
           cd $PATH_WORKDIR/$PATH_SRC
-
-          echo "Updating all feeds..."
+          
+          echo "🔄 Updating all feeds (no cache)..."
           ./scripts/feeds update -a
-          echo "Installing all feeds..."
+          echo "📦 Installing all feeds..."
           ./scripts/feeds install -a
           echo "Feeds update completed!"
 
@@ -305,29 +388,38 @@ jobs:
           make -j $(($(nproc)+1)) defconfig V=sc
           echo "Custom settings applied!"
 
-      - name: Download Packages
+      - name: Download Packages (Always Fresh)
         if: env.WRT_TEST != 'true'
         run: |
-          echo "=====Downloading Packages====="
+          echo "=====Downloading Packages (Always Fresh)====="
           cd $PATH_WORKDIR/$PATH_SRC
-          echo "Downloading with $(nproc) parallel jobs..."
+          
+          echo "🔄 Downloading packages (no cache)..."
+          echo "This ensures we always get the latest package versions."
           make -j $(($(nproc)+1)) download V=w
           echo "Package download completed!"
 
-      - name: Compile Firmware (Multi-threaded)
+      - name: Compile Firmware (Adaptive)
         if: env.WRT_TEST != 'true'
-        id: compile-mt
+        id: compile
         continue-on-error: true
         run: |
-          echo "=====Compiling Firmware (Multi-threaded)====="
+          echo "=====Compiling Firmware ($BUILD_STRATEGY mode)====="
+          echo "$CCACHE_DIR"
+          echo "$CCACHE_COMPRESS"
           cd $PATH_WORKDIR/$PATH_SRC
-          echo "Starting multi-threaded compilation with $(($(nproc)+1)) jobs..."
           echo "Compilation started at: $(date -Iseconds)"
           
-          make -j $(($(nproc)+1)) V=w
+          if [ "$BUILD_STRATEGY" = "fast" ]; then
+            echo "🚀 Fast compilation with cache"
+            make -j $(($(nproc)+1)) V=w
+          else
+            echo "🔨 Standard compilation"
+            make -j $(($(nproc)+1)) V=w
+          fi
 
       - name: Compile Firmware (Single-threaded for Error Analysis)
-        if: env.WRT_TEST != 'true' && steps.compile-mt.outcome == 'failure'
+        if: env.WRT_TEST != 'true' && steps.compile.outcome == 'failure'
         run: |
           echo "=====Compiling Firmware (Single-threaded for Error Analysis)====="
           cd $PATH_WORKDIR/$PATH_SRC
@@ -343,9 +435,9 @@ jobs:
           echo "=====Checking Compilation Result====="
           cd $PATH_WORKDIR/$PATH_SRC
           
-          if [ "${{ steps.compile-mt.outcome }}" = "success" ]; then
+          if [ "${{ steps.compile.outcome }}" = "success" ]; then
             echo "✅ Multi-threaded compilation completed successfully!"
-          elif [ "${{ steps.compile-mt.outcome }}" = "failure" ]; then
+          elif [ "${{ steps.compile.outcome }}" = "failure" ]; then
             echo "⚠️  Multi-threaded compilation failed, but single-threaded compilation may have succeeded."
             echo "Please check the logs above for detailed error information."
             
@@ -383,6 +475,6 @@ jobs:
       - name: Upload Firmware
         uses: actions/upload-artifact@v4
         with:
-          name: ${{env.WRT_VER}}_${{env.WRT_CONF}}_${{env.F_DATE}}
+          name: ${{env.WRT_VER}}_${{env.WRT_CONF}}_${{env.F_DATE}}${{env.WRT_COMMIT != '' && format('_commit-{0}', env.WRT_HASH) || ''}}
           path: ${{env.PATH_WORKDIR}}/${{env.PATH_SRC}}/upload/*
           if-no-files-found: error
