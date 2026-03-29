@@ -5,17 +5,17 @@ on:
   workflow_call:
     inputs:
       WRT_CONF:
-        description: '配置名 (Configs/目录下的子目录名)'
+        description: '配置名 (Configs/<WRT_CONF>.sh)'
         default: 'x86'
         required: true
         type: string
       WRT_REPO:
-        description: '源码仓库，留空则从 Configs/<WRT_CONF>/build.env 加载'
+        description: '源码仓库，留空则从 Configs/<WRT_CONF>.sh 加载'
         default: ''
         required: false
         type: string
       WRT_BRANCH:
-        description: '源码分支，留空则从 Configs/<WRT_CONF>/build.env 加载'
+        description: '源码分支，留空则从 Configs/<WRT_CONF>.sh 加载'
         default: ''
         required: false
         type: string
@@ -47,17 +47,17 @@ on:
   workflow_dispatch:
     inputs:
       WRT_CONF:
-        description: '配置名 (Configs/目录下的子目录名)'
+        description: '配置名 (Configs/<WRT_CONF>.sh)'
         default: 'x86'
         required: true
         type: string
       WRT_REPO:
-        description: '源码仓库（留空则从 Configs/<WRT_CONF>/build.env 加载）'
+        description: '源码仓库（留空则从 Configs/<WRT_CONF>.sh 加载）'
         default: ''
         required: false
         type: string
       WRT_BRANCH:
-        description: '源码分支（留空则从 Configs/<WRT_CONF>/build.env 加载）'
+        description: '源码分支（留空则从 Configs/<WRT_CONF>.sh 加载）'
         default: ''
         required: false
         type: string
@@ -153,8 +153,8 @@ jobs:
           echo ""
           echo "Build Configuration:"
           echo "- Config:         $WRT_CONF"
-          echo "- Repo (input):   ${WRT_REPO:-'(will load from build.env)'}"
-          echo "- Branch (input): ${WRT_BRANCH:-'(will load from build.env)'}"
+          echo "- Repo (input):   ${WRT_REPO:-'(will load from config file)'}"
+          echo "- Branch (input): ${WRT_BRANCH:-'(will load from config file)'}"
           echo "- Commit:         ${WRT_COMMIT:-'latest'}"
           echo "- Test Mode:      $WRT_TEST"
           echo "- Cache:          $WRT_CACHE"
@@ -170,55 +170,44 @@ jobs:
         shell: bash
         run: |
           echo "=====Loading Config Defaults====="
-          CONF_DIR="$GITHUB_WORKSPACE/$PATH_CI/Configs/$WRT_CONF"
-          BUILD_ENV="$CONF_DIR/build.env"
+          CONFIG_SH="$GITHUB_WORKSPACE/$PATH_CI/Configs/$WRT_CONF.sh"
 
-          # Validate config directory exists
-          if [ ! -d "$CONF_DIR" ]; then
-            echo "ERROR: Config directory not found: Configs/$WRT_CONF"
-            echo "Available configs:"
-            find "$GITHUB_WORKSPACE/$PATH_CI/Configs/" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' 2>/dev/null || echo "  (none)"
-            exit 1
-          fi
-          echo "Config directory found: Configs/$WRT_CONF"
-
-          # Parse build.env for default repo/branch values
+          # Save input values before any sourcing
+          INPUT_REPO="$WRT_REPO"
+          INPUT_BRANCH="$WRT_BRANCH"
           CONF_REPO=""
           CONF_BRANCH=""
-          if [ -f "$BUILD_ENV" ]; then
-            while IFS='=' read -r key value || [ -n "$key" ]; do
-              key="${key%%#*}"
-              key="${key// /}"
-              [[ -z "$key" ]] && continue
-              value="${value%%#*}"
-              value="${value#"${value%%[![:space:]]*}"}"
-              value="${value%"${value##*[![:space:]]}"}"
-              case "$key" in
-                WRT_REPO)   CONF_REPO="$value" ;;
-                WRT_BRANCH) CONF_BRANCH="$value" ;;
-              esac
-            done < "$BUILD_ENV"
-            echo "Loaded build.env: repo=${CONF_REPO}, branch=${CONF_BRANCH}"
+          CONF_CONFIG_FILE=""
+
+          if [ -f "$CONFIG_SH" ]; then
+            echo "Loading config from Configs/$WRT_CONF.sh ..."
+            source "$CONFIG_SH"
+            CONF_REPO="$WRT_REPO"
+            CONF_BRANCH="$WRT_BRANCH"
+            CONF_CONFIG_FILE="${WRT_CONFIG_FILE:-}"
           else
-            echo "No build.env found in Configs/$WRT_CONF"
+            echo "No Configs/$WRT_CONF.sh found"
+            echo "Available configs:"
+            find "$GITHUB_WORKSPACE/$PATH_CI/Configs/" -maxdepth 1 -name "*.sh" -printf '%f\n' 2>/dev/null | sed 's/\.sh$//' | sort || echo "  (none)"
           fi
 
-          # Effective values: workflow input takes priority over build.env defaults
-          FINAL_REPO="${WRT_REPO:-${CONF_REPO}}"
-          FINAL_BRANCH="${WRT_BRANCH:-${CONF_BRANCH}}"
+          # Workflow inputs take priority over config file values
+          FINAL_REPO="${INPUT_REPO:-${CONF_REPO}}"
+          FINAL_BRANCH="${INPUT_BRANCH:-${CONF_BRANCH}}"
 
           # Validate we have required values
           if [ -z "$FINAL_REPO" ]; then
-            echo "ERROR: WRT_REPO not set. Provide it via workflow input or add WRT_REPO to Configs/$WRT_CONF/build.env"
+            echo "ERROR: WRT_REPO not set. Provide it via workflow input or define WRT_REPO in Configs/$WRT_CONF.sh"
             exit 1
           fi
           if [ -z "$FINAL_BRANCH" ]; then
-            echo "ERROR: WRT_BRANCH not set. Provide it via workflow input or add WRT_BRANCH to Configs/$WRT_CONF/build.env"
+            echo "ERROR: WRT_BRANCH not set. Provide it via workflow input or define WRT_BRANCH in Configs/$WRT_CONF.sh"
             exit 1
           fi
 
-          echo "WRT_REPO=$FINAL_REPO"     >> $GITHUB_ENV
-          echo "WRT_BRANCH=$FINAL_BRANCH" >> $GITHUB_ENV
+          echo "WRT_REPO=$FINAL_REPO"                   >> $GITHUB_ENV
+          echo "WRT_BRANCH=$FINAL_BRANCH"               >> $GITHUB_ENV
+          echo "WRT_CONFIG_FILE_PATH=$CONF_CONFIG_FILE" >> $GITHUB_ENV
           echo "Effective repo:   $FINAL_REPO"
           echo "Effective branch: $FINAL_BRANCH"
 
@@ -305,14 +294,19 @@ jobs:
       - name: Hook - After Clone
         run: |
           echo "=====Hook: After Clone====="
-          HOOK="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF/hooks/01_after_clone.sh"
-          if [ -f "$HOOK" ]; then
-            echo "Running 01_after_clone.sh ..."
-            cd $PATH_WORKDIR/$PATH_SRC
-            bash "$HOOK"
-            echo "01_after_clone.sh completed!"
+          CONFIG_SH="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.sh"
+          if [ -f "$CONFIG_SH" ]; then
+            source "$CONFIG_SH"
+            if declare -f hook_after_clone > /dev/null 2>&1; then
+              echo "Running hook_after_clone ..."
+              cd $PATH_WORKDIR/$PATH_SRC
+              hook_after_clone
+              echo "hook_after_clone completed!"
+            else
+              echo "No hook_after_clone defined (skipping)"
+            fi
           else
-            echo "No 01_after_clone.sh found (skipping)"
+            echo "No config file found (skipping)"
           fi
 
       - name: Initialize Build Environment
@@ -334,9 +328,13 @@ jobs:
           echo "=====Generating Cache Key====="
           cd $PATH_WORKDIR/$PATH_SRC
 
-          CONFIG_FILE="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF/config.txt"
-          if [ ! -f "$CONFIG_FILE" ]; then
+          # Resolve .config file path
+          if [ -n "$WRT_CONFIG_FILE_PATH" ]; then
+            CONFIG_FILE="$PATH_WORKDIR/$PATH_CI/$WRT_CONFIG_FILE_PATH"
+          elif [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" ]; then
             CONFIG_FILE="$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt"
+          else
+            CONFIG_FILE=""
           fi
           CONFIG_HASH=$(sha256sum "$CONFIG_FILE" 2>/dev/null | cut -d' ' -f1 | cut -c1-8 || echo "00000000")
 
@@ -401,15 +399,20 @@ jobs:
           echo "=====Adding Custom Feeds====="
           cd $PATH_WORKDIR/$PATH_SRC
 
-          FEEDS_FILE="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF/feeds.txt"
-          if [ -f "$FEEDS_FILE" ]; then
-            echo "Loading feeds from Configs/$WRT_CONF/feeds.txt ..."
-            cat "$FEEDS_FILE" >> feeds.conf.default
+          CONFIG_SH="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.sh"
+          if [ -f "$CONFIG_SH" ]; then
+            source "$CONFIG_SH"
+            if [ -n "$CUSTOM_FEEDS" ]; then
+              printf '%s\n' "$CUSTOM_FEEDS" >> feeds.conf.default
+              echo "Custom feeds added from Configs/$WRT_CONF.sh"
+            else
+              echo "CUSTOM_FEEDS is empty in config file"
+            fi
           elif [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt" ]; then
-            echo "Loading feeds from Simple/Feeds/$WRT_CONF.txt (fallback) ..."
             cat "$PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt" >> feeds.conf.default
+            echo "Custom feeds added from Simple/Feeds/$WRT_CONF.txt (fallback)"
           else
-            echo "No custom feeds file found (skipping)"
+            echo "No custom feeds found (skipping)"
           fi
 
           echo "Current feeds configuration:"
@@ -419,14 +422,19 @@ jobs:
       - name: Hook - Before Feeds Update
         run: |
           echo "=====Hook: Before Feeds Update====="
-          HOOK="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF/hooks/02_before_feeds_update.sh"
-          if [ -f "$HOOK" ]; then
-            echo "Running 02_before_feeds_update.sh ..."
-            cd $PATH_WORKDIR/$PATH_SRC
-            bash "$HOOK"
-            echo "02_before_feeds_update.sh completed!"
+          CONFIG_SH="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.sh"
+          if [ -f "$CONFIG_SH" ]; then
+            source "$CONFIG_SH"
+            if declare -f hook_before_feeds_update > /dev/null 2>&1; then
+              echo "Running hook_before_feeds_update ..."
+              cd $PATH_WORKDIR/$PATH_SRC
+              hook_before_feeds_update
+              echo "hook_before_feeds_update completed!"
+            else
+              echo "No hook_before_feeds_update defined (skipping)"
+            fi
           else
-            echo "No 02_before_feeds_update.sh found (skipping)"
+            echo "No config file found (skipping)"
           fi
 
       - name: Update Feeds
@@ -440,14 +448,19 @@ jobs:
       - name: Hook - After Feeds Update
         run: |
           echo "=====Hook: After Feeds Update====="
-          HOOK="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF/hooks/03_after_feeds_update.sh"
-          if [ -f "$HOOK" ]; then
-            echo "Running 03_after_feeds_update.sh ..."
-            cd $PATH_WORKDIR/$PATH_SRC
-            bash "$HOOK"
-            echo "03_after_feeds_update.sh completed!"
+          CONFIG_SH="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.sh"
+          if [ -f "$CONFIG_SH" ]; then
+            source "$CONFIG_SH"
+            if declare -f hook_after_feeds_update > /dev/null 2>&1; then
+              echo "Running hook_after_feeds_update ..."
+              cd $PATH_WORKDIR/$PATH_SRC
+              hook_after_feeds_update
+              echo "hook_after_feeds_update completed!"
+            else
+              echo "No hook_after_feeds_update defined (skipping)"
+            fi
           else
-            echo "No 03_after_feeds_update.sh found (skipping)"
+            echo "No config file found (skipping)"
           fi
 
       - name: Install Feeds
@@ -461,14 +474,19 @@ jobs:
       - name: Hook - After Feeds Install
         run: |
           echo "=====Hook: After Feeds Install====="
-          HOOK="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF/hooks/04_after_feeds_install.sh"
-          if [ -f "$HOOK" ]; then
-            echo "Running 04_after_feeds_install.sh ..."
-            cd $PATH_WORKDIR/$PATH_SRC/package/
-            bash "$HOOK"
-            echo "04_after_feeds_install.sh completed!"
+          CONFIG_SH="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.sh"
+          if [ -f "$CONFIG_SH" ]; then
+            source "$CONFIG_SH"
+            if declare -f hook_after_feeds_install > /dev/null 2>&1; then
+              echo "Running hook_after_feeds_install ..."
+              cd $PATH_WORKDIR/$PATH_SRC/package/
+              hook_after_feeds_install
+              echo "hook_after_feeds_install completed!"
+            else
+              echo "No hook_after_feeds_install defined (skipping)"
+            fi
           else
-            echo "No 04_after_feeds_install.sh found (skipping)"
+            echo "No config file found (skipping)"
           fi
 
       - name: Apply Config
@@ -478,15 +496,20 @@ jobs:
 
           rm -rf ./tmp* ./.config*
 
-          CONFIG_FILE="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF/config.txt"
-          if [ -f "$CONFIG_FILE" ]; then
-            echo "Applying config from Configs/$WRT_CONF/config.txt ..."
-            cat "$CONFIG_FILE" >> .config
+          # Resolve .config file: WRT_CONFIG_FILE_PATH from config.sh > Simple/Config/ fallback
+          if [ -n "$WRT_CONFIG_FILE_PATH" ]; then
+            CONFIG_FILE="$PATH_WORKDIR/$PATH_CI/$WRT_CONFIG_FILE_PATH"
+            echo "Applying config from WRT_CONFIG_FILE: $WRT_CONFIG_FILE_PATH"
           elif [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" ]; then
-            echo "Applying config from Simple/Config/$WRT_CONF.txt (fallback) ..."
-            cat "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" >> .config
+            CONFIG_FILE="$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt"
+            echo "Applying config from Simple/Config/$WRT_CONF.txt (fallback)"
           else
+            CONFIG_FILE=""
             echo "No config file found for '$WRT_CONF', using default config"
+          fi
+
+          if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ]; then
+            cat "$CONFIG_FILE" >> .config
           fi
 
           echo "Generating default configuration..."
@@ -497,14 +520,19 @@ jobs:
       - name: Hook - Before Compile
         run: |
           echo "=====Hook: Before Compile====="
-          HOOK="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF/hooks/05_before_compile.sh"
-          if [ -f "$HOOK" ]; then
-            echo "Running 05_before_compile.sh ..."
-            cd $PATH_WORKDIR/$PATH_SRC
-            bash "$HOOK"
-            echo "05_before_compile.sh completed!"
+          CONFIG_SH="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.sh"
+          if [ -f "$CONFIG_SH" ]; then
+            source "$CONFIG_SH"
+            if declare -f hook_before_compile > /dev/null 2>&1; then
+              echo "Running hook_before_compile ..."
+              cd $PATH_WORKDIR/$PATH_SRC
+              hook_before_compile
+              echo "hook_before_compile completed!"
+            else
+              echo "No hook_before_compile defined (skipping)"
+            fi
           else
-            echo "No 05_before_compile.sh found (skipping)"
+            echo "No config file found (skipping)"
           fi
 
       - name: Download Packages

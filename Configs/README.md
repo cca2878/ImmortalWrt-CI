@@ -1,95 +1,67 @@
 # Configs 目录说明
 
-此目录存放 `WRT-CONTAINER.yml` 工作流的结构化编译配置。每个子目录代表一个独立的编译配置（config），包含该配置的所有信息。
+此目录存放 `WRT-CONTAINER.yml` 工作流的编译配置文件。每个配置对应一个独立的 `.sh` 文件，包含该配置的全部信息。
 
 ## 目录结构
 
 ```
 Configs/
-  <配置名>/
-    build.env                    # 源码仓库与分支的默认值
-    config.txt                   # 固件 .config 内容（可选，留空则回退到 Simple/Config/<配置名>.txt）
-    feeds.txt                    # 自定义 feeds 源（可选）
-    hooks/
-      01_after_clone.sh          # 钩子：代码克隆后
-      02_before_feeds_update.sh  # 钩子：添加 feeds 后、update 前
-      03_after_feeds_update.sh   # 钩子：feeds update 后、install 前
-      04_after_feeds_install.sh  # 钩子：feeds install 后
-      05_before_compile.sh       # 钩子：开始编译前
+  <配置名>.sh    # 单一配置文件，包含仓库信息、feeds、钩子脚本等全部内容
+  README.md
 ```
 
-## build.env 格式
+示例文件 `x86_example.sh` 包含所有可用字段的说明，可直接复制作为新配置的起点。
 
-```bash
-WRT_REPO=immortalwrt/immortalwrt
-WRT_BRANCH=openwrt-24.10
-```
+## 配置文件格式
 
-| 键           | 说明                                     |
-|--------------|------------------------------------------|
-| `WRT_REPO`   | GitHub 仓库，格式为 `owner/repo`         |
-| `WRT_BRANCH` | 分支名                                   |
+每个配置文件是一个 Bash 脚本，定义以下内容：
 
-## 文件说明
-
-| 文件                | 说明                                                                 |
-|---------------------|----------------------------------------------------------------------|
-| `build.env`         | 设置该配置的默认源码仓库和分支。若工作流启动时手动填写了相应参数，则优先使用手动填写的值（override）。 |
-| `config.txt`        | 固件编译配置（即 `.config` 内容）。若此文件不存在，工作流会回退到 `Simple/Config/<配置名>.txt`。 |
-| `feeds.txt`         | 追加到 `feeds.conf.default` 的自定义 feed 源。若不存在，回退到 `Simple/Feeds/<配置名>.txt`。 |
-| `hooks/*.sh`        | 各生命周期钩子脚本。不存在则跳过。                                    |
-
-## 钩子脚本说明
-
-所有钩子脚本均可访问以下环境变量：
-
-- `$PATH_WORKDIR` — 工作目录根路径
-- `$PATH_CI` — CI 代码目录名（相对于 `$PATH_WORKDIR`）
-- `$PATH_SRC` — 源码目录名（相对于 `$PATH_WORKDIR`）
-- `$WRT_CONF` — 当前配置名
-- `$WRT_REPO` — 实际使用的源码仓库
-- `$WRT_BRANCH` — 实际使用的分支
-- `$WRT_TAG` — 构建 Tag
-- `$WRT_VER` — 版本字符串
-- `$F_DATE` — 构建日期
-
-各钩子的工作目录：
-
-| 钩子                      | 工作目录                          |
-|---------------------------|-----------------------------------|
-| `01_after_clone.sh`       | `$PATH_WORKDIR/$PATH_SRC`         |
-| `02_before_feeds_update.sh` | `$PATH_WORKDIR/$PATH_SRC`       |
-| `03_after_feeds_update.sh` | `$PATH_WORKDIR/$PATH_SRC`        |
-| `04_after_feeds_install.sh` | `$PATH_WORKDIR/$PATH_SRC/package/` |
-| `05_before_compile.sh`    | `$PATH_WORKDIR/$PATH_SRC`         |
+| 变量/函数              | 类型     | 说明                                                                          |
+|------------------------|----------|-------------------------------------------------------------------------------|
+| `WRT_REPO`             | 必填变量 | 源码仓库，格式为 `owner/repo`                                                 |
+| `WRT_BRANCH`           | 必填变量 | 源码分支                                                                      |
+| `WRT_CONFIG_FILE`      | 可选变量 | `.config` 文件路径（相对于 CI 仓库根目录）。留空则回退到 `Simple/Config/<配置名>.txt` |
+| `CUSTOM_FEEDS`         | 可选变量 | 追加到 `feeds.conf.default` 的自定义 feed 源。留空则回退到 `Simple/Feeds/<配置名>.txt` |
+| `hook_after_clone()`   | 可选函数 | 代码克隆后执行                                                                |
+| `hook_before_feeds_update()` | 可选函数 | 添加 feeds 后、`feeds update` 前执行                                   |
+| `hook_after_feeds_update()`  | 可选函数 | `feeds update` 后、`feeds install` 前执行                              |
+| `hook_after_feeds_install()` | 可选函数 | `feeds install` 后执行                                                 |
+| `hook_before_compile()`      | 可选函数 | `defconfig` 后、编译前执行                                             |
 
 ## 使用方式
 
 ### 仅填写配置名启动编译
 
-在 `WRT-CONTAINER.yml` 的 `workflow_dispatch` 中，只需填写 `WRT_CONF`，其余参数留空，工作流将自动从 `Configs/<WRT_CONF>/build.env` 加载仓库和分支信息。
+在 `WRT-CONTAINER.yml` 的 `workflow_dispatch` 中，`WRT_CONF` 填写配置文件名（不含 `.sh` 后缀），其余参数留空：
+
+- `WRT_CONF` = `x86_example`
+- `WRT_REPO` = （留空，从配置文件加载）
+- `WRT_BRANCH` = （留空，从配置文件加载）
 
 ### 手动覆盖参数
 
-在 `workflow_dispatch` 中填写 `WRT_REPO` 和/或 `WRT_BRANCH`，可覆盖 `build.env` 中的默认值，方便临时切换仓库或分支测试。
+在 `workflow_dispatch` 中填写 `WRT_REPO` 和/或 `WRT_BRANCH`，可覆盖配置文件中的值，方便临时切换仓库或分支测试。
+
+### 在 workflow_call 中不使用配置文件
+
+`WRT_REPO` 和 `WRT_BRANCH` 直接通过 `with:` 传入时，配置文件不是必须的（向后兼容现有调用）：
+
+```yaml
+build_x86:
+  uses: ./.github/workflows/WRT-CONTAINER.yml
+  with:
+    WRT_REPO: 'immortalwrt/immortalwrt'
+    WRT_BRANCH: 'openwrt-24.10'
+    WRT_CONF: 'x86'
+```
+
+若 `Configs/x86.sh` 不存在，钩子和自定义 feeds 将被跳过，`.config` 从 `Simple/Config/x86.txt` 加载。
 
 ## 添加新配置
 
 ```bash
-mkdir -p Configs/my_new_config/hooks
-
-# 创建 build.env
-cat > Configs/my_new_config/build.env <<EOF
-WRT_REPO=immortalwrt/immortalwrt
-WRT_BRANCH=openwrt-24.10
-EOF
-
-# 创建 feeds.txt（可选）
-touch Configs/my_new_config/feeds.txt
-
-# 创建 config.txt（可选，否则从 Simple/Config/my_new_config.txt 加载）
-# cp Simple/Config/x86.txt Configs/my_new_config/config.txt
-
-# 创建钩子脚本（可选）
-cp Configs/x86/hooks/*.sh Configs/my_new_config/hooks/
+cp Configs/x86_example.sh Configs/my_new_config.sh
+# 编辑 my_new_config.sh，修改 WRT_REPO、WRT_BRANCH、CUSTOM_FEEDS 及钩子函数
 ```
+
+然后在 `workflow_dispatch` 中将 `WRT_CONF` 填写为 `my_new_config` 即可。
