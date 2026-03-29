@@ -146,6 +146,8 @@ config: |
   # CONFIG_PACKAGE_kmod-tg3 is not set
   # CONFIG_PACKAGE_kmod-tulip is not set
   CONFIG_PACKAGE_kmod-tun=y
+  CONFIG_PACKAGE_kmod-usb-net-cdc-ether=y
+  CONFIG_PACKAGE_kmod-usb-net-rndis=y
   CONFIG_PACKAGE_kmod-veth=y
   # CONFIG_PACKAGE_kmod-vmxnet3 is not set
   CONFIG_PACKAGE_libatomic=y
