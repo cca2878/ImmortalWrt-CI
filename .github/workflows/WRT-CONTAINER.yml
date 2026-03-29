@@ -5,17 +5,17 @@ on:
   workflow_call:
     inputs:
       WRT_CONF:
-        description: '配置名 (Configs/<WRT_CONF>.sh)'
+        description: '配置名 (Configs/<WRT_CONF>.yml)'
         default: 'x86'
         required: true
         type: string
       WRT_REPO:
-        description: '源码仓库，留空则从 Configs/<WRT_CONF>.sh 加载'
+        description: '源码仓库，留空则从 Configs/<WRT_CONF>.yml 加载'
         default: ''
         required: false
         type: string
       WRT_BRANCH:
-        description: '源码分支，留空则从 Configs/<WRT_CONF>.sh 加载'
+        description: '源码分支，留空则从 Configs/<WRT_CONF>.yml 加载'
         default: ''
         required: false
         type: string
@@ -47,17 +47,17 @@ on:
   workflow_dispatch:
     inputs:
       WRT_CONF:
-        description: '配置名 (Configs/<WRT_CONF>.sh)'
+        description: '配置名 (Configs/<WRT_CONF>.yml)'
         default: 'x86'
         required: true
         type: string
       WRT_REPO:
-        description: '源码仓库（留空则从 Configs/<WRT_CONF>.sh 加载）'
+        description: '源码仓库（留空则从 Configs/<WRT_CONF>.yml 加载）'
         default: ''
         required: false
         type: string
       WRT_BRANCH:
-        description: '源码分支（留空则从 Configs/<WRT_CONF>.sh 加载）'
+        description: '源码分支（留空则从 Configs/<WRT_CONF>.yml 加载）'
         default: ''
         required: false
         type: string
@@ -123,7 +123,7 @@ jobs:
         run: |
           echo "=====Initializing System====="
           apt -yqq update
-          apt -yqq install tzdata sudo git dos2unix curl
+          apt -yqq install tzdata sudo git dos2unix curl python3 python3-yaml
 
           echo "Setting timezone to Asia/Shanghai..."
           ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
@@ -170,25 +170,23 @@ jobs:
         shell: bash
         run: |
           echo "=====Loading Config Defaults====="
-          CONFIG_SH="$GITHUB_WORKSPACE/$PATH_CI/Configs/$WRT_CONF.sh"
+          CONFIG_YML="$GITHUB_WORKSPACE/$PATH_CI/Configs/$WRT_CONF.yml"
+          WRT_CFG="$GITHUB_WORKSPACE/$PATH_CI/Configs/wrt_cfg.py"
 
-          # Save input values before any sourcing
+          # Save workflow inputs before loading config file
           INPUT_REPO="$WRT_REPO"
           INPUT_BRANCH="$WRT_BRANCH"
           CONF_REPO=""
           CONF_BRANCH=""
-          CONF_CONFIG_FILE=""
 
-          if [ -f "$CONFIG_SH" ]; then
-            echo "Loading config from Configs/$WRT_CONF.sh ..."
-            source "$CONFIG_SH"
-            CONF_REPO="$WRT_REPO"
-            CONF_BRANCH="$WRT_BRANCH"
-            CONF_CONFIG_FILE="${WRT_CONFIG_FILE:-}"
+          if [ -f "$CONFIG_YML" ]; then
+            echo "Loading config from Configs/$WRT_CONF.yml ..."
+            CONF_REPO=$(python3 "$WRT_CFG" get "$CONFIG_YML" repo)
+            CONF_BRANCH=$(python3 "$WRT_CFG" get "$CONFIG_YML" branch)
           else
-            echo "No Configs/$WRT_CONF.sh found"
+            echo "No Configs/$WRT_CONF.yml found"
             echo "Available configs:"
-            find "$GITHUB_WORKSPACE/$PATH_CI/Configs/" -maxdepth 1 -name "*.sh" -printf '%f\n' 2>/dev/null | sed 's/\.sh$//' | sort || echo "  (none)"
+            find "$GITHUB_WORKSPACE/$PATH_CI/Configs/" -maxdepth 1 -name "*.yml" -printf '%f\n' 2>/dev/null | sed 's/\.yml$//' | sort || echo "  (none)"
           fi
 
           # Workflow inputs take priority over config file values
@@ -197,17 +195,16 @@ jobs:
 
           # Validate we have required values
           if [ -z "$FINAL_REPO" ]; then
-            echo "ERROR: WRT_REPO not set. Provide it via workflow input or define WRT_REPO in Configs/$WRT_CONF.sh"
+            echo "ERROR: WRT_REPO not set. Provide it via workflow input or set 'repo' in Configs/$WRT_CONF.yml"
             exit 1
           fi
           if [ -z "$FINAL_BRANCH" ]; then
-            echo "ERROR: WRT_BRANCH not set. Provide it via workflow input or define WRT_BRANCH in Configs/$WRT_CONF.sh"
+            echo "ERROR: WRT_BRANCH not set. Provide it via workflow input or set 'branch' in Configs/$WRT_CONF.yml"
             exit 1
           fi
 
-          echo "WRT_REPO=$FINAL_REPO"                   >> $GITHUB_ENV
-          echo "WRT_BRANCH=$FINAL_BRANCH"               >> $GITHUB_ENV
-          echo "WRT_CONFIG_FILE_PATH=$CONF_CONFIG_FILE" >> $GITHUB_ENV
+          echo "WRT_REPO=$FINAL_REPO"   >> $GITHUB_ENV
+          echo "WRT_BRANCH=$FINAL_BRANCH" >> $GITHUB_ENV
           echo "Effective repo:   $FINAL_REPO"
           echo "Effective branch: $FINAL_BRANCH"
 
@@ -294,16 +291,17 @@ jobs:
       - name: Hook - After Clone
         run: |
           echo "=====Hook: After Clone====="
-          CONFIG_SH="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.sh"
-          if [ -f "$CONFIG_SH" ]; then
-            source "$CONFIG_SH"
-            if declare -f hook_after_clone > /dev/null 2>&1; then
-              echo "Running hook_after_clone ..."
-              cd $PATH_WORKDIR/$PATH_SRC
-              hook_after_clone
-              echo "hook_after_clone completed!"
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+          if [ -f "$CONFIG_YML" ]; then
+            HOOK_SCRIPT=$(python3 "$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py" hook "$CONFIG_YML" after_clone)
+            if [ -n "$HOOK_SCRIPT" ]; then
+              echo "Running after_clone hook ..."
+              HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
+              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              echo "after_clone hook completed!"
             else
-              echo "No hook_after_clone defined (skipping)"
+              echo "No after_clone hook defined (skipping)"
             fi
           else
             echo "No config file found (skipping)"
@@ -327,16 +325,17 @@ jobs:
         run: |
           echo "=====Generating Cache Key====="
           cd $PATH_WORKDIR/$PATH_SRC
+          WRT_CFG="$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py"
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
 
-          # Resolve .config file path
-          if [ -n "$WRT_CONFIG_FILE_PATH" ]; then
-            CONFIG_FILE="$PATH_WORKDIR/$PATH_CI/$WRT_CONFIG_FILE_PATH"
+          # Hash the config content from the YAML file, or the fallback .txt file
+          if [ -f "$CONFIG_YML" ]; then
+            CONFIG_HASH=$(python3 "$WRT_CFG" get "$CONFIG_YML" config | sha256sum | cut -c1-8)
           elif [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" ]; then
-            CONFIG_FILE="$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt"
+            CONFIG_HASH=$(sha256sum "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" | cut -c1-8)
           else
-            CONFIG_FILE=""
+            CONFIG_HASH="00000000"
           fi
-          CONFIG_HASH=$(sha256sum "$CONFIG_FILE" 2>/dev/null | cut -d' ' -f1 | cut -c1-8 || echo "00000000")
 
           CACHE_KEY="${WRT_VER}-${WRT_CONF}-${WRT_HASH}-${CONFIG_HASH}"
           echo "CACHE_KEY=$CACHE_KEY" >> $GITHUB_ENV
@@ -399,14 +398,20 @@ jobs:
           echo "=====Adding Custom Feeds====="
           cd $PATH_WORKDIR/$PATH_SRC
 
-          CONFIG_SH="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.sh"
-          if [ -f "$CONFIG_SH" ]; then
-            source "$CONFIG_SH"
-            if [ -n "$CUSTOM_FEEDS" ]; then
-              printf '%s\n' "$CUSTOM_FEEDS" >> feeds.conf.default
-              echo "Custom feeds added from Configs/$WRT_CONF.sh"
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+          if [ -f "$CONFIG_YML" ]; then
+            FEEDS_CONTENT=$(python3 "$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py" get "$CONFIG_YML" feeds)
+            if [ -n "$FEEDS_CONTENT" ]; then
+              printf '%s\n' "$FEEDS_CONTENT" >> feeds.conf.default
+              echo "Custom feeds added from Configs/$WRT_CONF.yml"
             else
-              echo "CUSTOM_FEEDS is empty in config file"
+              echo "feeds is empty in config file, checking fallback..."
+              if [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt" ]; then
+                cat "$PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt" >> feeds.conf.default
+                echo "Custom feeds added from Simple/Feeds/$WRT_CONF.txt (fallback)"
+              else
+                echo "No custom feeds found (skipping)"
+              fi
             fi
           elif [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt" ]; then
             cat "$PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt" >> feeds.conf.default
@@ -422,16 +427,17 @@ jobs:
       - name: Hook - Before Feeds Update
         run: |
           echo "=====Hook: Before Feeds Update====="
-          CONFIG_SH="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.sh"
-          if [ -f "$CONFIG_SH" ]; then
-            source "$CONFIG_SH"
-            if declare -f hook_before_feeds_update > /dev/null 2>&1; then
-              echo "Running hook_before_feeds_update ..."
-              cd $PATH_WORKDIR/$PATH_SRC
-              hook_before_feeds_update
-              echo "hook_before_feeds_update completed!"
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+          if [ -f "$CONFIG_YML" ]; then
+            HOOK_SCRIPT=$(python3 "$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py" hook "$CONFIG_YML" before_feeds_update)
+            if [ -n "$HOOK_SCRIPT" ]; then
+              echo "Running before_feeds_update hook ..."
+              HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
+              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              echo "before_feeds_update hook completed!"
             else
-              echo "No hook_before_feeds_update defined (skipping)"
+              echo "No before_feeds_update hook defined (skipping)"
             fi
           else
             echo "No config file found (skipping)"
@@ -448,16 +454,17 @@ jobs:
       - name: Hook - After Feeds Update
         run: |
           echo "=====Hook: After Feeds Update====="
-          CONFIG_SH="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.sh"
-          if [ -f "$CONFIG_SH" ]; then
-            source "$CONFIG_SH"
-            if declare -f hook_after_feeds_update > /dev/null 2>&1; then
-              echo "Running hook_after_feeds_update ..."
-              cd $PATH_WORKDIR/$PATH_SRC
-              hook_after_feeds_update
-              echo "hook_after_feeds_update completed!"
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+          if [ -f "$CONFIG_YML" ]; then
+            HOOK_SCRIPT=$(python3 "$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py" hook "$CONFIG_YML" after_feeds_update)
+            if [ -n "$HOOK_SCRIPT" ]; then
+              echo "Running after_feeds_update hook ..."
+              HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
+              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              echo "after_feeds_update hook completed!"
             else
-              echo "No hook_after_feeds_update defined (skipping)"
+              echo "No after_feeds_update hook defined (skipping)"
             fi
           else
             echo "No config file found (skipping)"
@@ -474,16 +481,17 @@ jobs:
       - name: Hook - After Feeds Install
         run: |
           echo "=====Hook: After Feeds Install====="
-          CONFIG_SH="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.sh"
-          if [ -f "$CONFIG_SH" ]; then
-            source "$CONFIG_SH"
-            if declare -f hook_after_feeds_install > /dev/null 2>&1; then
-              echo "Running hook_after_feeds_install ..."
-              cd $PATH_WORKDIR/$PATH_SRC/package/
-              hook_after_feeds_install
-              echo "hook_after_feeds_install completed!"
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+          if [ -f "$CONFIG_YML" ]; then
+            HOOK_SCRIPT=$(python3 "$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py" hook "$CONFIG_YML" after_feeds_install)
+            if [ -n "$HOOK_SCRIPT" ]; then
+              echo "Running after_feeds_install hook ..."
+              HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
+              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd $PATH_WORKDIR/$PATH_SRC/package/ && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              echo "after_feeds_install hook completed!"
             else
-              echo "No hook_after_feeds_install defined (skipping)"
+              echo "No after_feeds_install hook defined (skipping)"
             fi
           else
             echo "No config file found (skipping)"
@@ -493,23 +501,31 @@ jobs:
         run: |
           echo "=====Applying Config====="
           cd $PATH_WORKDIR/$PATH_SRC
+          WRT_CFG="$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py"
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
 
           rm -rf ./tmp* ./.config*
 
-          # Resolve .config file: WRT_CONFIG_FILE_PATH from config.sh > Simple/Config/ fallback
-          if [ -n "$WRT_CONFIG_FILE_PATH" ]; then
-            CONFIG_FILE="$PATH_WORKDIR/$PATH_CI/$WRT_CONFIG_FILE_PATH"
-            echo "Applying config from WRT_CONFIG_FILE: $WRT_CONFIG_FILE_PATH"
+          # Read config content: inline 'config' key in yml > Simple/Config/ fallback
+          if [ -f "$CONFIG_YML" ]; then
+            CONFIG_CONTENT=$(python3 "$WRT_CFG" get "$CONFIG_YML" config)
+            if [ -n "$CONFIG_CONTENT" ]; then
+              printf '%s\n' "$CONFIG_CONTENT" >> .config
+              echo "Config applied from Configs/$WRT_CONF.yml (config key)"
+            else
+              echo "config key is empty in yml, checking fallback..."
+              if [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" ]; then
+                cat "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" >> .config
+                echo "Config applied from Simple/Config/$WRT_CONF.txt (fallback)"
+              else
+                echo "No config content found for '$WRT_CONF', using default config"
+              fi
+            fi
           elif [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" ]; then
-            CONFIG_FILE="$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt"
-            echo "Applying config from Simple/Config/$WRT_CONF.txt (fallback)"
+            cat "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" >> .config
+            echo "Config applied from Simple/Config/$WRT_CONF.txt (fallback)"
           else
-            CONFIG_FILE=""
-            echo "No config file found for '$WRT_CONF', using default config"
-          fi
-
-          if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ]; then
-            cat "$CONFIG_FILE" >> .config
+            echo "No config content found for '$WRT_CONF', using default config"
           fi
 
           echo "Generating default configuration..."
@@ -520,16 +536,17 @@ jobs:
       - name: Hook - Before Compile
         run: |
           echo "=====Hook: Before Compile====="
-          CONFIG_SH="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.sh"
-          if [ -f "$CONFIG_SH" ]; then
-            source "$CONFIG_SH"
-            if declare -f hook_before_compile > /dev/null 2>&1; then
-              echo "Running hook_before_compile ..."
-              cd $PATH_WORKDIR/$PATH_SRC
-              hook_before_compile
-              echo "hook_before_compile completed!"
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+          if [ -f "$CONFIG_YML" ]; then
+            HOOK_SCRIPT=$(python3 "$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py" hook "$CONFIG_YML" before_compile)
+            if [ -n "$HOOK_SCRIPT" ]; then
+              echo "Running before_compile hook ..."
+              HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
+              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              echo "before_compile hook completed!"
             else
-              echo "No hook_before_compile defined (skipping)"
+              echo "No before_compile hook defined (skipping)"
             fi
           else
             echo "No config file found (skipping)"
