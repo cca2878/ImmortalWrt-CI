@@ -4,22 +4,25 @@ name: WRT-CONTAINER
 on:
   workflow_call:
     inputs:
-      WRT_REPO:
-        default: 'immortalwrt/immortalwrt'
+      WRT_CONF:
+        description: '配置名 (Configs/<WRT_CONF>.yml)'
+        default: 'x86'
         required: true
         type: string
+      WRT_REPO:
+        description: '源码仓库，留空则从 Configs/<WRT_CONF>.yml 加载'
+        default: ''
+        required: false
+        type: string
       WRT_BRANCH:
-        default: 'master'
-        required: true
+        description: '源码分支，留空则从 Configs/<WRT_CONF>.yml 加载'
+        default: ''
+        required: false
         type: string
       WRT_COMMIT:
         description: '指定源码Commit (留空使用最新)'
         default: ''
         required: false
-        type: string
-      WRT_CONF:
-        default: 'x86'
-        required: true
         type: string
       WRT_CACHE:
         description: '使用Cache'
@@ -40,25 +43,28 @@ on:
         default: '/volume_mnt'
         required: false
         type: string
-        
+
   workflow_dispatch:
     inputs:
-      WRT_REPO:
-        default: 'immortalwrt/immortalwrt'
+      WRT_CONF:
+        description: '配置名 (Configs/<WRT_CONF>.yml)'
+        default: 'x86'
         required: true
         type: string
+      WRT_REPO:
+        description: '源码仓库（留空则从 Configs/<WRT_CONF>.yml 加载）'
+        default: ''
+        required: false
+        type: string
       WRT_BRANCH:
-        default: 'master'
-        required: true
+        description: '源码分支（留空则从 Configs/<WRT_CONF>.yml 加载）'
+        default: ''
+        required: false
         type: string
       WRT_COMMIT:
         description: '指定源码Commit (留空使用最新)'
         default: ''
         required: false
-        type: string
-      WRT_CONF:
-        default: 'x86'
-        required: true
         type: string
       WRT_CACHE:
         description: '使用Cache'
@@ -85,7 +91,7 @@ env:
   PATH_WORKDIR: ${{inputs.PATH_MOUNT}}/work
   PATH_CI: ci
   PATH_SRC: opwrt_src
-  
+
   WRT_CONF: ${{inputs.WRT_CONF}}
   WRT_TAGCONF: ${{inputs.WRT_TAGCONF}}
   WRT_REPO: ${{inputs.WRT_REPO}}
@@ -96,9 +102,12 @@ env:
 
 jobs:
   core:
-    name: CONTAINER_${{inputs.WRT_REPO}}_${{inputs.WRT_CONF}}
+    name: CONTAINER_${{inputs.WRT_CONF}}
     runs-on: ubuntu-latest
-    container: 
+    permissions:
+      contents: read
+      actions: write
+    container:
       image: ubuntu:latest
       volumes:
         - /mnt:${{inputs.PATH_MOUNT}}
@@ -114,15 +123,15 @@ jobs:
         run: |
           echo "=====Initializing System====="
           apt -yqq update
-          apt -yqq install tzdata sudo git dos2unix curl
-          
+          apt -yqq install tzdata sudo git dos2unix curl python3 python3-yaml
+
           echo "Setting timezone to Asia/Shanghai..."
           ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
           dpkg-reconfigure --frontend noninteractive tzdata
-          
+
           echo "Configuring ubuntu user..."
           passwd -d ubuntu
-          
+
           echo "Setting up work directory..."
           if [ -d $PATH_WORKDIR ]; then
             echo "Removing existing work directory..."
@@ -143,27 +152,68 @@ jobs:
           echo "Disk: $(df -h / | awk 'NR==2{printf "%s used / %s total (%s)", $3, $2, $5}')"
           echo ""
           echo "Build Configuration:"
-          echo "- Repository: $WRT_REPO"
-          echo "- Branch: $WRT_BRANCH"
-          echo "- Commit: ${WRT_COMMIT:-'latest'}"
-          echo "- Config: $WRT_CONF"
-          echo "- Test Mode: $WRT_TEST"
-          echo "- Cache: $WRT_CACHE"
-          echo "- Time: $(date -Iseconds)"
+          echo "- Config:         $WRT_CONF"
+          echo "- Repo (input):   ${WRT_REPO:-'(will load from config file)'}"
+          echo "- Branch (input): ${WRT_BRANCH:-'(will load from config file)'}"
+          echo "- Commit:         ${WRT_COMMIT:-'latest'}"
+          echo "- Test Mode:      $WRT_TEST"
+          echo "- Cache:          $WRT_CACHE"
+          echo "- Time:           $(date -Iseconds)"
           echo "========================================"
 
       - name: Checkout CI Code
         uses: actions/checkout@v4
         with:
           path: ${{env.PATH_CI}}
-          
+
+      - name: Load Config Defaults
+        shell: bash
+        run: |
+          echo "=====Loading Config Defaults====="
+          CONFIG_YML="$GITHUB_WORKSPACE/$PATH_CI/Configs/$WRT_CONF.yml"
+          WRT_CFG="$GITHUB_WORKSPACE/$PATH_CI/Configs/wrt_cfg.py"
+
+          # Save workflow inputs before loading config file
+          INPUT_REPO="$WRT_REPO"
+          INPUT_BRANCH="$WRT_BRANCH"
+          CONF_REPO=""
+          CONF_BRANCH=""
+
+          if [ -f "$CONFIG_YML" ]; then
+            echo "Loading config from Configs/$WRT_CONF.yml ..."
+            CONF_REPO=$(python3 "$WRT_CFG" get "$CONFIG_YML" repo)
+            CONF_BRANCH=$(python3 "$WRT_CFG" get "$CONFIG_YML" branch)
+          else
+            echo "No Configs/$WRT_CONF.yml found"
+            echo "Available configs:"
+            find "$GITHUB_WORKSPACE/$PATH_CI/Configs/" -maxdepth 1 -name "*.yml" -printf '%f\n' 2>/dev/null | sed 's/\.yml$//' | sort || echo "  (none)"
+          fi
+
+          # Workflow inputs take priority over config file values
+          FINAL_REPO="${INPUT_REPO:-${CONF_REPO}}"
+          FINAL_BRANCH="${INPUT_BRANCH:-${CONF_BRANCH}}"
+
+          # Validate we have required values
+          if [ -z "$FINAL_REPO" ]; then
+            echo "ERROR: WRT_REPO not set. Provide it via workflow input or set 'repo' in Configs/$WRT_CONF.yml"
+            exit 1
+          fi
+          if [ -z "$FINAL_BRANCH" ]; then
+            echo "ERROR: WRT_BRANCH not set. Provide it via workflow input or set 'branch' in Configs/$WRT_CONF.yml"
+            exit 1
+          fi
+
+          echo "WRT_REPO=$FINAL_REPO"   >> $GITHUB_ENV
+          echo "WRT_BRANCH=$FINAL_BRANCH" >> $GITHUB_ENV
+          echo "Effective repo:   $FINAL_REPO"
+          echo "Effective branch: $FINAL_BRANCH"
+
       - name: Checkout Source Code
         uses: actions/checkout@v4
         with:
           repository: ${{env.WRT_REPO}}
           ref: ${{env.WRT_BRANCH}}
           path: ${{env.PATH_SRC}}
-          # 获取完整历史以支持指定commit
           fetch-depth: 0
 
       - name: Initialize Values
@@ -181,9 +231,9 @@ jobs:
 
           export F_DATE=$(date +"%y%m%dT%H%M%S")
           export WRT_VER=$(echo $WRT_REPO | sed 's/\//-/g')'_'$WRT_BRANCH
-          echo "F_DATE=$F_DATE" >> $GITHUB_ENV
+          echo "F_DATE=$F_DATE"   >> $GITHUB_ENV
           echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
-          echo "Build date: $F_DATE"
+          echo "Build date:     $F_DATE"
           echo "Version string: $WRT_VER"
 
       - name: Check and Switch Source Code
@@ -191,64 +241,76 @@ jobs:
         run: |
           echo "=====Checking and Switching Source Code====="
           cd $GITHUB_WORKSPACE/$PATH_SRC
-          
-          # 显示当前状态
+
           echo "Current branch: $(git branch --show-current)"
-          echo "Latest commit on branch: $(git log -1 --pretty=format:'%h - %s (%an, %ar)')"
-          
-          # 如果指定了commit，则切换到该commit
+          echo "Latest commit:  $(git log -1 --pretty=format:'%h - %s (%an, %ar)')"
+
           if [ -n "$WRT_COMMIT" ]; then
-            echo "🎯 Switching to specified commit: $WRT_COMMIT"
-            
-            # 验证commit是否存在
+            echo "Switching to specified commit: $WRT_COMMIT"
             if git cat-file -e "$WRT_COMMIT^{commit}" 2>/dev/null; then
               git checkout "$WRT_COMMIT"
-              echo "✅ Successfully switched to commit: $WRT_COMMIT"
+              echo "Successfully switched to commit: $WRT_COMMIT"
             else
-              echo "❌ Error: Commit '$WRT_COMMIT' not found in repository"
+              echo "ERROR: Commit '$WRT_COMMIT' not found in repository"
               echo "Available recent commits:"
               git log --oneline -10
               exit 1
             fi
           else
-            echo "📍 Using latest commit on branch $WRT_BRANCH"
+            echo "Using latest commit on branch $WRT_BRANCH"
           fi
-          
-          # 获取最终使用的commit hash
+
           HASH=$(git log -1 --pretty=format:'%h')
           FULL_HASH=$(git log -1 --pretty=format:'%H')
-          echo "WRT_HASH=$HASH" >> $GITHUB_ENV
+          echo "WRT_HASH=$HASH"           >> $GITHUB_ENV
           echo "WRT_FULL_HASH=$FULL_HASH" >> $GITHUB_ENV
-          
+
           echo ""
           echo "=== Final Source Code Information ==="
-          echo "Using commit: $HASH ($FULL_HASH)"
-          echo "Commit message: $(git log -1 --pretty=format:'%s')"
-          echo "Commit author: $(git log -1 --pretty=format:'%an <%ae>')"
-          echo "Commit date: $(git log -1 --pretty=format:'%cd')"
-          echo "=================================="
+          echo "Commit:  $HASH ($FULL_HASH)"
+          echo "Message: $(git log -1 --pretty=format:'%s')"
+          echo "Author:  $(git log -1 --pretty=format:'%an <%ae>')"
+          echo "Date:    $(git log -1 --pretty=format:'%cd')"
+          echo "====================================="
 
       - name: Prepare Source Code
         run: |
           echo "=====Preparing Source Code====="
-          echo "Copying CI scripts to work directory..."
           cp -r $GITHUB_WORKSPACE/$PATH_CI $PATH_WORKDIR/$PATH_CI
-          echo "Copying source code to work directory..."
           cp -r $GITHUB_WORKSPACE/$PATH_SRC $PATH_WORKDIR/$PATH_SRC
-          
+
           echo "Cleaning up GitHub workspace..."
           sudo rm -rf $GITHUB_WORKSPACE/$PATH_CI
           sudo rm -rf $GITHUB_WORKSPACE/$PATH_SRC
-        
+
           echo "Setting file permissions..."
           find $PATH_WORKDIR/$PATH_CI -type f -iregex '.*(txt|sh)$' -exec dos2unix {} \; -exec chmod 777 {} \;
           echo "Source code preparation completed!"
 
+      # ── Hook 1: After code clone ─────────────────────────────────────────
+      - name: Hook - After Clone
+        run: |
+          echo "=====Hook: After Clone====="
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+          if [ -f "$CONFIG_YML" ]; then
+            HOOK_SCRIPT=$(python3 "$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py" hook "$CONFIG_YML" after_clone)
+            if [ -n "$HOOK_SCRIPT" ]; then
+              echo "Running after_clone hook ..."
+              HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
+              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              echo "after_clone hook completed!"
+            else
+              echo "No after_clone hook defined (skipping)"
+            fi
+          else
+            echo "No config file found (skipping)"
+          fi
+
       - name: Initialize Build Environment
         run: |
           echo "=====Initializing Build Environment====="
-          echo "Upgrading system packages..."
-          sudo apt -yqq full-upgrade        
+          sudo apt -yqq full-upgrade
           sudo apt -yqq autoremove --purge
           sudo apt -yqq autoclean
           sudo apt -yqq clean
@@ -263,22 +325,26 @@ jobs:
         run: |
           echo "=====Generating Cache Key====="
           cd $PATH_WORKDIR/$PATH_SRC
-          
-          # 配置文件内容hash
-          CONFIG_HASH=$(sha256sum $PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt | cut -d' ' -f1 | cut -c1-8)
-          
-          # 使用实际的commit hash (不是分支名)
-          ACTUAL_HASH=$WRT_HASH
-          
-          # 构建cache key
-          CACHE_KEY="${WRT_VER}-${WRT_CONF}-${ACTUAL_HASH}-${CONFIG_HASH}"
+          WRT_CFG="$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py"
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+
+          # Hash the config content from the YAML file, or the fallback .txt file
+          if [ -f "$CONFIG_YML" ]; then
+            CONFIG_HASH=$(python3 "$WRT_CFG" get "$CONFIG_YML" config | sha256sum | cut -c1-8)
+          elif [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" ]; then
+            CONFIG_HASH=$(sha256sum "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" | cut -c1-8)
+          else
+            CONFIG_HASH="00000000"
+          fi
+
+          CACHE_KEY="${WRT_VER}-${WRT_CONF}-${WRT_HASH}-${CONFIG_HASH}"
           echo "CACHE_KEY=$CACHE_KEY" >> $GITHUB_ENV
-          
-          echo "Cache key: $CACHE_KEY"
-          echo "- Version: $WRT_VER"
-          echo "- Config: $WRT_CONF"
-          echo "- Commit: $ACTUAL_HASH"
-          echo "- Config hash: $CONFIG_HASH"
+
+          echo "Cache key:   $CACHE_KEY"
+          echo "- Version:   $WRT_VER"
+          echo "- Config:    $WRT_CONF"
+          echo "- Commit:    $WRT_HASH"
+          echo "- Conf hash: $CONFIG_HASH"
 
       - name: Check Caches
         id: check-cache
@@ -301,33 +367,25 @@ jobs:
         run: |
           echo "=====Configuring Build Cache====="
           cd $PATH_WORKDIR/$PATH_SRC
-          
-          # 配置ccache
+
           export CCACHE_DIR="$PWD/.ccache"
           export CCACHE_COMPRESS="1"
-          echo "CCACHE_DIR=$CCACHE_DIR" >> $GITHUB_ENV
+          echo "CCACHE_DIR=$CCACHE_DIR"           >> $GITHUB_ENV
           echo "CCACHE_COMPRESS=$CCACHE_COMPRESS" >> $GITHUB_ENV
-          
+
           if [ "${{ steps.check-cache.outputs.cache-hit }}" = "true" ]; then
-            echo "✅ Cache hit! Using optimized build strategy."
+            echo "Cache hit! Using optimized build strategy."
             echo "BUILD_STRATEGY=fast" >> $GITHUB_ENV
-            
-            # 显示缓存统计
             ccache -s 2>/dev/null || echo "ccache statistics not available yet"
-            echo "Cached staging directories:"
-            ls -la staging_dir/ 2>/dev/null || echo "staging_dir will be populated"
-            
           else
-            echo "❌ Cache miss. Using standard build strategy."
+            echo "Cache miss. Using standard build strategy."
             echo "BUILD_STRATEGY=standard" >> $GITHUB_ENV
-            
-            # 清理旧缓存 (只在定时任务时)
+
             if [ "${{ github.event_name }}" = "schedule" ]; then
               echo "Scheduled build: cleaning up old caches..."
               export GH_TOKEN="${{ github.token }}"
               gh extension install actions/gh-actions-cache 2>/dev/null || true
-              
-              # 只保留最近3个缓存
+
               CACHE_LIST=$(gh actions-cache list --key "${{env.WRT_VER}}-${{env.WRT_CONF}}" --repo "${{ github.repository }}" --limit 10 2>/dev/null | tail -n +4 | cut -f 1 || echo "")
               for CACHE_KEY_TO_DELETE in $CACHE_LIST; do
                 gh actions-cache delete "$CACHE_KEY_TO_DELETE" --repo "${{ github.repository }}" --confirm 2>/dev/null || true
@@ -335,67 +393,170 @@ jobs:
             fi
           fi
 
-      - name: Custom Feeds
+      - name: Add Custom Feeds
         run: |
-          echo "=====Configuring Custom Feeds====="
+          echo "=====Adding Custom Feeds====="
           cd $PATH_WORKDIR/$PATH_SRC
-          
-          echo "Adding custom feeds for $WRT_CONF..."
-          if [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt" ]; then
-            cat $PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt >> feeds.conf.default
-            echo "Custom feeds configuration added."
+
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+          if [ -f "$CONFIG_YML" ]; then
+            FEEDS_CONTENT=$(python3 "$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py" get "$CONFIG_YML" feeds)
+            if [ -n "$FEEDS_CONTENT" ]; then
+              printf '%s\n' "$FEEDS_CONTENT" >> feeds.conf.default
+              echo "Custom feeds added from Configs/$WRT_CONF.yml"
+            else
+              echo "feeds is empty in config file, checking fallback..."
+              if [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt" ]; then
+                cat "$PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt" >> feeds.conf.default
+                echo "Custom feeds added from Simple/Feeds/$WRT_CONF.txt (fallback)"
+              else
+                echo "No custom feeds found (skipping)"
+              fi
+            fi
+          elif [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt" ]; then
+            cat "$PATH_WORKDIR/$PATH_CI/Simple/Feeds/$WRT_CONF.txt" >> feeds.conf.default
+            echo "Custom feeds added from Simple/Feeds/$WRT_CONF.txt (fallback)"
+          else
+            echo "No custom feeds found (skipping)"
           fi
-          
+
           echo "Current feeds configuration:"
           cat feeds.conf.default
 
-      - name: Update Feeds (Always Fresh)
+      # ── Hook 2: After adding feeds, before update ─────────────────────────
+      - name: Hook - Before Feeds Update
         run: |
-          echo "=====Updating Feeds (Always Fresh)====="
+          echo "=====Hook: Before Feeds Update====="
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+          if [ -f "$CONFIG_YML" ]; then
+            HOOK_SCRIPT=$(python3 "$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py" hook "$CONFIG_YML" before_feeds_update)
+            if [ -n "$HOOK_SCRIPT" ]; then
+              echo "Running before_feeds_update hook ..."
+              HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
+              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              echo "before_feeds_update hook completed!"
+            else
+              echo "No before_feeds_update hook defined (skipping)"
+            fi
+          else
+            echo "No config file found (skipping)"
+          fi
+
+      - name: Update Feeds
+        run: |
+          echo "=====Updating Feeds====="
           cd $PATH_WORKDIR/$PATH_SRC
-          
-          echo "🔄 Updating all feeds (no cache)..."
           ./scripts/feeds update -a
-          echo "📦 Installing all feeds..."
-          ./scripts/feeds install -a
           echo "Feeds update completed!"
 
-      - name: Custom Packages
+      # ── Hook 3: After update, before install ─────────────────────────────
+      - name: Hook - After Feeds Update
         run: |
-          echo "=====Configuring Custom Packages====="
-          cd $PATH_WORKDIR/$PATH_SRC/package/
+          echo "=====Hook: After Feeds Update====="
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+          if [ -f "$CONFIG_YML" ]; then
+            HOOK_SCRIPT=$(python3 "$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py" hook "$CONFIG_YML" after_feeds_update)
+            if [ -n "$HOOK_SCRIPT" ]; then
+              echo "Running after_feeds_update hook ..."
+              HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
+              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              echo "after_feeds_update hook completed!"
+            else
+              echo "No after_feeds_update hook defined (skipping)"
+            fi
+          else
+            echo "No config file found (skipping)"
+          fi
 
-          echo "Running custom packages script..."
-          bash $PATH_WORKDIR/$PATH_CI/Simple/Scripts/Packages.sh
-          echo "Running custom handles script..."
-          bash $PATH_WORKDIR/$PATH_CI/Simple/Scripts/Handles.sh
-          echo "Custom packages configuration completed!"
-
-      - name: Custom Settings
+      - name: Install Feeds
         run: |
-          echo "=====Applying Custom Settings====="
+          echo "=====Installing Feeds====="
           cd $PATH_WORKDIR/$PATH_SRC
+          ./scripts/feeds install -a
+          echo "Feeds install completed!"
 
-          echo "Cleaning temporary files..."
+      # ── Hook 4: After install ─────────────────────────────────────────────
+      - name: Hook - After Feeds Install
+        run: |
+          echo "=====Hook: After Feeds Install====="
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+          if [ -f "$CONFIG_YML" ]; then
+            HOOK_SCRIPT=$(python3 "$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py" hook "$CONFIG_YML" after_feeds_install)
+            if [ -n "$HOOK_SCRIPT" ]; then
+              echo "Running after_feeds_install hook ..."
+              HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
+              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd $PATH_WORKDIR/$PATH_SRC/package/ && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              echo "after_feeds_install hook completed!"
+            else
+              echo "No after_feeds_install hook defined (skipping)"
+            fi
+          else
+            echo "No config file found (skipping)"
+          fi
+
+      - name: Apply Config
+        run: |
+          echo "=====Applying Config====="
+          cd $PATH_WORKDIR/$PATH_SRC
+          WRT_CFG="$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py"
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+
           rm -rf ./tmp* ./.config*
 
-          echo "Applying configuration for $WRT_CONF..."
-          cat $PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt >> .config
-          echo "Running custom settings script..."
-          bash $PATH_WORKDIR/$PATH_CI/Simple/Scripts/Settings.sh
+          # Read config content: inline 'config' key in yml > Simple/Config/ fallback
+          if [ -f "$CONFIG_YML" ]; then
+            CONFIG_CONTENT=$(python3 "$WRT_CFG" get "$CONFIG_YML" config)
+            if [ -n "$CONFIG_CONTENT" ]; then
+              printf '%s\n' "$CONFIG_CONTENT" >> .config
+              echo "Config applied from Configs/$WRT_CONF.yml (config key)"
+            else
+              echo "config key is empty in yml, checking fallback..."
+              if [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" ]; then
+                cat "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" >> .config
+                echo "Config applied from Simple/Config/$WRT_CONF.txt (fallback)"
+              else
+                echo "No config content found for '$WRT_CONF', using default config"
+              fi
+            fi
+          elif [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" ]; then
+            cat "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" >> .config
+            echo "Config applied from Simple/Config/$WRT_CONF.txt (fallback)"
+          else
+            echo "No config content found for '$WRT_CONF', using default config"
+          fi
 
           echo "Generating default configuration..."
           make -j $(($(nproc)+1)) defconfig V=sc
-          echo "Custom settings applied!"
+          echo "Config applied!"
 
-      - name: Download Packages (Always Fresh)
+      # ── Hook 5: Before compilation starts ────────────────────────────────
+      - name: Hook - Before Compile
+        run: |
+          echo "=====Hook: Before Compile====="
+          CONFIG_YML="$PATH_WORKDIR/$PATH_CI/Configs/$WRT_CONF.yml"
+          if [ -f "$CONFIG_YML" ]; then
+            HOOK_SCRIPT=$(python3 "$PATH_WORKDIR/$PATH_CI/Configs/wrt_cfg.py" hook "$CONFIG_YML" before_compile)
+            if [ -n "$HOOK_SCRIPT" ]; then
+              echo "Running before_compile hook ..."
+              HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
+              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              echo "before_compile hook completed!"
+            else
+              echo "No before_compile hook defined (skipping)"
+            fi
+          else
+            echo "No config file found (skipping)"
+          fi
+
+      - name: Download Packages
         if: env.WRT_TEST != 'true'
         run: |
-          echo "=====Downloading Packages (Always Fresh)====="
+          echo "=====Downloading Packages====="
           cd $PATH_WORKDIR/$PATH_SRC
-          
-          echo "🔄 Downloading packages (no cache)..."
-          echo "This ensures we always get the latest package versions."
           make -j $(($(nproc)+1)) download V=w
           echo "Package download completed!"
 
@@ -409,12 +570,12 @@ jobs:
           echo "$CCACHE_COMPRESS"
           cd $PATH_WORKDIR/$PATH_SRC
           echo "Compilation started at: $(date -Iseconds)"
-          
+
           if [ "$BUILD_STRATEGY" = "fast" ]; then
-            echo "🚀 Fast compilation with cache"
+            echo "Fast compilation with cache"
             make -j $(($(nproc)+1)) V=w
           else
-            echo "🔨 Standard compilation"
+            echo "Standard compilation"
             make -j $(($(nproc)+1)) V=w
           fi
 
@@ -424,9 +585,6 @@ jobs:
           echo "=====Compiling Firmware (Single-threaded for Error Analysis)====="
           cd $PATH_WORKDIR/$PATH_SRC
           echo "Multi-threaded compilation failed, starting single-threaded compilation for detailed error analysis..."
-          echo "This will provide more detailed error information."
-          echo "Single-threaded compilation started at: $(date -Iseconds)"
-          
           make -j 1 V=sc
 
       - name: Check Compilation Result
@@ -434,18 +592,16 @@ jobs:
         run: |
           echo "=====Checking Compilation Result====="
           cd $PATH_WORKDIR/$PATH_SRC
-          
+
           if [ "${{ steps.compile.outcome }}" = "success" ]; then
-            echo "✅ Multi-threaded compilation completed successfully!"
+            echo "Multi-threaded compilation completed successfully!"
           elif [ "${{ steps.compile.outcome }}" = "failure" ]; then
-            echo "⚠️  Multi-threaded compilation failed, but single-threaded compilation may have succeeded."
-            echo "Please check the logs above for detailed error information."
-            
-            # 检查是否有编译产物来判断单线程编译是否成功
+            echo "Multi-threaded compilation failed, single-threaded may have succeeded."
+
             if find ./bin/targets/ -name "*.bin" -o -name "*.img" -o -name "*.tar" 2>/dev/null | grep -q .; then
-              echo "✅ Single-threaded compilation produced firmware files."
+              echo "Single-threaded compilation produced firmware files."
             else
-              echo "❌ Single-threaded compilation also failed - no firmware files found."
+              echo "ERROR: Single-threaded compilation also failed - no firmware files found."
               echo "::warning::Compilation completed with errors - please check logs for details"
               exit 1
             fi
@@ -456,14 +612,10 @@ jobs:
           echo "=====Packaging Firmware====="
           cd $PATH_WORKDIR/$PATH_SRC && mkdir ./upload
 
-          echo "Copying configuration file..."
           cp -f ./.config ./upload/config_"$WRT_VER"_"$WRT_CONF"_"$F_DATE".txt
 
           if [[ $WRT_TEST != 'true' ]]; then
-            echo "Packaging firmware files..."
-            echo "Removing unnecessary files..."
             find ./bin/targets/ -iregex ".*\(json\|manifest\|packages\)$" -exec rm -rf {} +
-            echo "Moving firmware files to upload directory..."
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
             echo "Firmware files:"
             ls -la ./upload/
@@ -471,7 +623,7 @@ jobs:
             echo "Test mode: only configuration file will be uploaded."
           fi
           echo "Packaging completed!"
-          
+
       - name: Upload Firmware
         uses: actions/upload-artifact@v4
         with:

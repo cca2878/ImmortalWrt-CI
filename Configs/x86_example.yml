@@ -1,0 +1,58 @@
+# =============================================================================
+# 配置示例 - x86 平台
+#
+# 使用方式:
+#   在 WRT-CONTAINER 的 workflow_dispatch 中，将 WRT_CONF 填写为 "x86_example"
+#   即可自动加载此文件，无需手动填写仓库和分支。
+#   如需临时切换仓库/分支，可在 workflow_dispatch 中手动填写以覆盖此处的默认值。
+# =============================================================================
+
+# 源码仓库（必填）
+repo: "immortalwrt/immortalwrt"
+
+# 源码分支（必填）
+branch: "openwrt-24.10"
+
+# .config 内容（可选），留空时自动回退到 Simple/Config/<配置名>.txt
+# 直接粘贴 .config 文件的内容，或只写需要覆盖的选项行
+config: |
+  CONFIG_TARGET_x86=y
+  CONFIG_TARGET_x86_64=y
+  CONFIG_TARGET_x86_64_DEVICE_generic=y
+  # CONFIG_PACKAGE_luci-app-passwall is not set
+
+# 追加到 feeds.conf.default 的自定义 Feed 源（可选）
+# 留空时自动回退到 Simple/Feeds/<配置名>.txt
+feeds: |
+  src-git passwall2 https://github.com/xiaorouji/openwrt-passwall2
+  src-git mosdns https://github.com/sbwml/luci-app-mosdns
+
+# =============================================================================
+# 构建生命周期钩子（可选）
+#
+# 各钩子均为 shell 脚本内容，直接写命令，留空或省略则跳过。
+# 钩子中可使用以下环境变量:
+#   $PATH_WORKDIR  — 工作目录根路径
+#   $PATH_CI       — CI 代码目录名（相对于 $PATH_WORKDIR）
+#   $PATH_SRC      — 源码目录名（相对于 $PATH_WORKDIR）
+#   $WRT_CONF / $WRT_REPO / $WRT_BRANCH / $WRT_TAG / $WRT_VER / $F_DATE
+# =============================================================================
+hooks:
+
+  # 钩子1：代码克隆后 | 工作目录: $PATH_WORKDIR/$PATH_SRC
+  after_clone: ""
+
+  # 钩子2：添加 feeds 后、feeds update 前 | 工作目录: $PATH_WORKDIR/$PATH_SRC
+  before_feeds_update: ""
+
+  # 钩子3：feeds update 后、feeds install 前 | 工作目录: $PATH_WORKDIR/$PATH_SRC
+  after_feeds_update: ""
+
+  # 钩子4：feeds install 后 | 工作目录: $PATH_WORKDIR/$PATH_SRC/package/
+  after_feeds_install: |
+    git clone --depth 1 https://github.com/sbwml/luci-app-mosdns luci-app-mosdns
+
+  # 钩子5：defconfig 后、开始编译前 | 工作目录: $PATH_WORKDIR/$PATH_SRC
+  before_compile: |
+    sed -i 's/DISTRIB_DESCRIPTION.*/DISTRIB_DESCRIPTION="MyBuild"/g' \
+      package/base-files/files/etc/openwrt_release
