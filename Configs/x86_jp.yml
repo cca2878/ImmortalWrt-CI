@@ -287,6 +287,7 @@ hooks:
   after_feeds_update: ""
   after_feeds_install: |-
     ./scripts/feeds update sbwml_mosdns local_feeds
+    ./scripts/feeds uninstall mosdns
     ./scripts/feeds install -f -p sbwml_mosdns mosdns luci-app-mosdns v2dat
     ./scripts/feeds install -f -p local_feeds v2ray-geoip v2ray-geosite
   before_compile: |-
