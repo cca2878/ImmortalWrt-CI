@@ -48,7 +48,7 @@ hooks:
   # 钩子3：feeds update 后、feeds install 前 | 工作目录: $PATH_WORKDIR/$PATH_SRC
   after_feeds_update: ""
 
-  # 钩子4：feeds install 后 | 工作目录: $PATH_WORKDIR/$PATH_SRC/package/
+  # 钩子4：feeds install 后 | 工作目录: $PATH_WORKDIR/$PATH_SRC
   after_feeds_install: |
     git clone --depth 1 https://github.com/sbwml/luci-app-mosdns luci-app-mosdns
 

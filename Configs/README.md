@@ -58,7 +58,7 @@ hooks:
 | `hooks.after_clone`         | 可选 | 代码克隆后执行，工作目录: `$PATH_SRC`                                                |
 | `hooks.before_feeds_update` | 可选 | `feeds update` 前执行，工作目录: `$PATH_SRC`                                         |
 | `hooks.after_feeds_update`  | 可选 | `feeds update` 后、`install` 前，工作目录: `$PATH_SRC`                               |
-| `hooks.after_feeds_install` | 可选 | `feeds install` 后执行，工作目录: `$PATH_SRC/package/`                               |
+| `hooks.after_feeds_install` | 可选 | `feeds install` 后执行，工作目录: `$PATH_SRC`                                        |
 | `hooks.before_compile`      | 可选 | `defconfig` 后、编译前执行，工作目录: `$PATH_SRC`                                    |
 
 钩子脚本中可使用的环境变量：`$PATH_WORKDIR`、`$PATH_CI`、`$PATH_SRC`、`$WRT_CONF`、`$WRT_REPO`、`$WRT_BRANCH`、`$WRT_TAG`、`$WRT_VER`、`$F_DATE`

@@ -488,7 +488,7 @@ jobs:
               echo "Running after_feeds_install hook ..."
               HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
               printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
-              cd $PATH_WORKDIR/$PATH_SRC/package/ && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
               echo "after_feeds_install hook completed!"
             else
               echo "No after_feeds_install hook defined (skipping)"

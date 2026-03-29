@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WRT-CONTAINER 配置生成</title>
+</head>
+<body>
+  <h1>WRT-CONTAINER 配置生成</h1>
+  <p>生成 <code>Configs/&lt;名&gt;.yml</code>；Workflow 里 <code>WRT_CONF</code> 填文件名（无后缀）。同目录 <code>js-yaml.min.js</code> 负责解析/序列化 YAML，请勿删。</p>
+
+  <p><label>从 YAML 反填 <input type="file" id="yamlLoad" accept=".yml,.yaml,text/yaml,text/plain" /></label></p>
+
+  <p><label>配置名（下载用，无 .yml）<br /><input id="confName" placeholder="my_x86" size="40" /></label></p>
+  <p>
+    <label>repo *<br /><input id="repo" value="immortalwrt/immortalwrt" size="50" /></label><br />
+    <label>branch *<br /><input id="branch" value="openwrt-24.10" size="40" /></label>
+  </p>
+  <p>
+    <label>config（可选）<br /><textarea id="config" rows="10" cols="72" placeholder="CONFIG_..."></textarea><br />
+    <input type="file" data-for="config" accept=".txt,.config,.conf,text/plain,*/*" /></label>
+  </p>
+  <p>
+    <label>feeds（可选）<br /><textarea id="feeds" rows="8" cols="72" placeholder="src-git ..."></textarea><br />
+    <input type="file" data-for="feeds" accept=".txt,text/plain,*/*" /></label>
+  </p>
+  <p>
+    <label>after_clone<br /><textarea id="after_clone" rows="4" cols="72"></textarea><br />
+    <input type="file" data-for="after_clone" accept=".sh,.txt,text/plain,*/*" /></label>
+  </p>
+  <p>
+    <label>before_feeds_update<br /><textarea id="before_feeds_update" rows="4" cols="72"></textarea><br />
+    <input type="file" data-for="before_feeds_update" accept=".sh,.txt,text/plain,*/*" /></label>
+  </p>
+  <p>
+    <label>after_feeds_update<br /><textarea id="after_feeds_update" rows="4" cols="72"></textarea><br />
+    <input type="file" data-for="after_feeds_update" accept=".sh,.txt,text/plain,*/*" /></label>
+  </p>
+  <p>
+    <label>after_feeds_install<br /><textarea id="after_feeds_install" rows="4" cols="72"></textarea><br />
+    <input type="file" data-for="after_feeds_install" accept=".sh,.txt,text/plain,*/*" /></label>
+  </p>
+  <p>
+    <label>before_compile<br /><textarea id="before_compile" rows="4" cols="72"></textarea><br />
+    <input type="file" data-for="before_compile" accept=".sh,.txt,text/plain,*/*" /></label>
+  </p>
+
+  <p>
+    <button type="button" id="btnGen">生成</button>
+    <button type="button" id="btnValidate">校验预览</button>
+    <button type="button" id="btnFmt">格式化预览</button>
+    <button type="button" id="btnFillFromOut">预览→表单</button>
+    <button type="button" id="btnCopy">复制</button>
+    <button type="button" id="btnDl">下载</button>
+  </p>
+  <pre id="out">（点「生成」）</pre>
+
+  <script src="js-yaml.min.js"></script>
+  <script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var out = $("out");
+  var last = "";
+  var HOOK_KEYS = ["after_clone", "before_feeds_update", "after_feeds_update", "after_feeds_install", "before_compile"];
+
+  var DUMP_OPTS = {
+    indent: 2,
+    lineWidth: -1,
+    noRefs: true,
+    quotingType: '"',
+    sortKeys: false
+  };
+
+  function ensureYaml() {
+    if (typeof jsyaml !== "undefined" && jsyaml.load && jsyaml.dump) return true;
+    alert("未加载 js-yaml：请确认 js-yaml.min.js 与本 HTML 在同一目录后刷新");
+    return false;
+  }
+
+  function nl(s) { return String(s).replace(/\r\n/g, "\n").replace(/\r/g, "\n"); }
+
+  function stripBom(s) {
+    s = String(s);
+    return s.charCodeAt(0) === 0xfeff ? s.slice(1) : s;
+  }
+
+  function fieldToText(v) {
+    if (v == null || v === "") return "";
+    if (typeof v === "string") return v;
+    if (typeof v === "number" || typeof v === "boolean") return String(v);
+    try { return JSON.stringify(v, null, 2); } catch (e) { return String(v); }
+  }
+
+  function applyYaml(cfg) {
+    if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) {
+      alert("无效的 YAML 根结构（须为对象）");
+      return;
+    }
+    if (cfg.repo != null) $("repo").value = String(cfg.repo);
+    if (cfg.branch != null) $("branch").value = String(cfg.branch);
+    $("config").value = fieldToText(cfg.config);
+    $("feeds").value = fieldToText(cfg.feeds);
+    var hooks = cfg.hooks && typeof cfg.hooks === "object" && !Array.isArray(cfg.hooks) ? cfg.hooks : {};
+    for (var i = 0; i < HOOK_KEYS.length; i++) {
+      var k = HOOK_KEYS[i];
+      $(k).value = fieldToText(hooks[k]);
+    }
+  }
+
+  function collectFormToDoc() {
+    var repo = $("repo").value.trim();
+    var branch = $("branch").value.trim();
+    if (!repo) { alert("填写 repo"); return null; }
+    if (!branch) { alert("填写 branch"); return null; }
+    var hooksObj = {};
+    for (var i = 0; i < HOOK_KEYS.length; i++) {
+      hooksObj[HOOK_KEYS[i]] = nl($(HOOK_KEYS[i]).value).trim();
+    }
+    var conf = nl($("config").value);
+    var feeds = nl($("feeds").value);
+    return {
+      repo: repo,
+      branch: branch,
+      config: conf.trim() ? conf : "",
+      feeds: feeds.trim() ? feeds : "",
+      hooks: hooksObj
+    };
+  }
+
+  function buildText(doc) {
+    var name = $("confName").value.trim() || "my_config";
+    var body = jsyaml.dump(doc, DUMP_OPTS);
+    return "# WRT-CONTAINER / " + name + "\n\n" + body;
+  }
+
+  function loadYamlText(text) {
+    return jsyaml.load(stripBom(text));
+  }
+
+  function bindUpload(inp) {
+    var tid = inp.getAttribute("data-for");
+    if (!tid) return;
+    inp.addEventListener("change", function () {
+      var f = inp.files[0];
+      if (!f) return;
+      var r = new FileReader();
+      r.onload = function () {
+        $(tid).value = stripBom(r.result);
+        inp.value = "";
+      };
+      r.onerror = function () { alert("读取文件失败"); inp.value = ""; };
+      r.readAsText(f, "UTF-8");
+    });
+  }
+
+  var ups = document.querySelectorAll("input[type=file][data-for]");
+  for (var u = 0; u < ups.length; u++) bindUpload(ups[u]);
+
+  $("yamlLoad").addEventListener("change", function () {
+    var inp = $("yamlLoad");
+    var f = inp.files[0];
+    if (!f) return;
+    if (!ensureYaml()) { inp.value = ""; return; }
+    var base = f.name.replace(/\.(ya?ml)$/i, "");
+    if (base && /^[\w.-]+$/.test(base)) $("confName").value = base;
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        applyYaml(loadYamlText(r.result));
+      } catch (e) {
+        alert("YAML 解析失败: " + (e && e.message ? e.message : e));
+      }
+      inp.value = "";
+    };
+    r.onerror = function () { alert("读取文件失败"); inp.value = ""; };
+    r.readAsText(f, "UTF-8");
+  });
+
+  $("btnGen").onclick = function () {
+    if (!ensureYaml()) return;
+    var doc = collectFormToDoc();
+    if (!doc) return;
+    try {
+      last = buildText(doc);
+      jsyaml.load(last);
+      out.textContent = last;
+    } catch (e) {
+      alert("生成失败: " + (e && e.message ? e.message : e));
+    }
+  };
+
+  $("btnValidate").onclick = function () {
+    if (!ensureYaml()) return;
+    var t = stripBom(out.textContent);
+    try {
+      var doc = jsyaml.load(t);
+      if (doc != null && typeof doc !== "object") alert("根节点不是映射，但仍为合法 YAML");
+      else alert("YAML 语法有效");
+    } catch (e) {
+      alert("无效: " + (e && e.message ? e.message : e));
+    }
+  };
+
+  $("btnFmt").onclick = function () {
+    if (!ensureYaml()) return;
+    try {
+      var doc = jsyaml.load(stripBom(out.textContent));
+      if (!doc || typeof doc !== "object" || Array.isArray(doc)) {
+        alert("根节点须为 YAML 对象（映射）");
+        return;
+      }
+      last = buildText(doc);
+      out.textContent = last;
+    } catch (e) {
+      alert("格式化失败: " + (e && e.message ? e.message : e));
+    }
+  };
+
+  $("btnFillFromOut").onclick = function () {
+    if (!ensureYaml()) return;
+    try {
+      applyYaml(jsyaml.load(stripBom(out.textContent)));
+      alert("已从预览填入表单");
+    } catch (e) {
+      alert("解析预览失败: " + (e && e.message ? e.message : e));
+    }
+  };
+
+  $("btnCopy").onclick = function () {
+    if (!ensureYaml()) return;
+    if (!last) {
+      var doc = collectFormToDoc();
+      if (!doc) return;
+      try {
+        last = buildText(doc);
+        out.textContent = last;
+      } catch (e) {
+        alert("生成失败: " + (e && e.message ? e.message : e));
+        return;
+      }
+    }
+    navigator.clipboard.writeText(last).then(function () { alert("已复制"); }, function () { alert("复制失败"); });
+  };
+
+  $("btnDl").onclick = function () {
+    if (!ensureYaml()) return;
+    if (!last) {
+      var doc = collectFormToDoc();
+      if (!doc) return;
+      try {
+        last = buildText(doc);
+        out.textContent = last;
+      } catch (e) {
+        alert("生成失败: " + (e && e.message ? e.message : e));
+        return;
+      }
+    }
+    var name = ($("confName").value.trim() || "my_config").replace(/[^\w.-]+/g, "_");
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([last], { type: "text/yaml;charset=utf-8" }));
+    a.download = name + ".yml";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+})();
+  </script>
+</body>
+</html>

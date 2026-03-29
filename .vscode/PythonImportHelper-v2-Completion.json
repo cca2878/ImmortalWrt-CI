@@ -1,0 +1,38 @@
+[
+    {
+        "label": "sys",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "sys",
+        "description": "sys",
+        "detail": "sys",
+        "documentation": {}
+    },
+    {
+        "label": "yaml",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "yaml",
+        "description": "yaml",
+        "detail": "yaml",
+        "documentation": {}
+    },
+    {
+        "label": "cmd",
+        "kind": 5,
+        "importPath": "Configs.wrt_cfg",
+        "description": "Configs.wrt_cfg",
+        "peekOfCode": "cmd = sys.argv[1]\nyml_file = sys.argv[2]\ntry:\n    with open(yml_file) as f:\n        cfg = yaml.safe_load(f) or {}\nexcept (FileNotFoundError, yaml.YAMLError):\n    cfg = {}\nif cmd == 'get':\n    val = cfg\n    for k in sys.argv[3:]:",
+        "detail": "Configs.wrt_cfg",
+        "documentation": {}
+    },
+    {
+        "label": "yml_file",
+        "kind": 5,
+        "importPath": "Configs.wrt_cfg",
+        "description": "Configs.wrt_cfg",
+        "peekOfCode": "yml_file = sys.argv[2]\ntry:\n    with open(yml_file) as f:\n        cfg = yaml.safe_load(f) or {}\nexcept (FileNotFoundError, yaml.YAMLError):\n    cfg = {}\nif cmd == 'get':\n    val = cfg\n    for k in sys.argv[3:]:\n        val = (val if isinstance(val, dict) else {}).get(k) or ''",
+        "detail": "Configs.wrt_cfg",
+        "documentation": {}
+    }
+]
