@@ -54,8 +54,10 @@ config: |
   CONFIG_LIBCURL_THREADED_RESOLVER=y
   CONFIG_LIBCURL_TLS_SRP=y
   CONFIG_LIBCURL_UNIX_SOCKETS=y
-  CONFIG_LUCI_SRCDIET=y
+  # CONFIG_LUCI_CSSTIDY is not set
+  CONFIG_LUCI_LANG_ja=y
   CONFIG_PACKAGE_7z=y
+  CONFIG_PACKAGE_adguardhome=y
   CONFIG_PACKAGE_amd64-microcode=y
   CONFIG_PACKAGE_blkid=y
   # CONFIG_PACKAGE_bnx2-firmware is not set
@@ -91,6 +93,11 @@ config: |
   CONFIG_PACKAGE_kmod-br-netfilter=y
   CONFIG_PACKAGE_kmod-crypto-acompress=y
   CONFIG_PACKAGE_kmod-crypto-blake2b=y
+  CONFIG_PACKAGE_kmod-crypto-kpp=y
+  CONFIG_PACKAGE_kmod-crypto-lib-chacha20=y
+  CONFIG_PACKAGE_kmod-crypto-lib-chacha20poly1305=y
+  CONFIG_PACKAGE_kmod-crypto-lib-curve25519=y
+  CONFIG_PACKAGE_kmod-crypto-lib-poly1305=y
   CONFIG_PACKAGE_kmod-crypto-xxhash=y
   CONFIG_PACKAGE_kmod-dummy=y
   # CONFIG_PACKAGE_kmod-dwmac-intel is not set
@@ -146,10 +153,13 @@ config: |
   # CONFIG_PACKAGE_kmod-tg3 is not set
   # CONFIG_PACKAGE_kmod-tulip is not set
   CONFIG_PACKAGE_kmod-tun=y
+  CONFIG_PACKAGE_kmod-udptunnel4=y
+  CONFIG_PACKAGE_kmod-udptunnel6=y
   CONFIG_PACKAGE_kmod-usb-net-cdc-ether=y
   CONFIG_PACKAGE_kmod-usb-net-rndis=y
   CONFIG_PACKAGE_kmod-veth=y
   # CONFIG_PACKAGE_kmod-vmxnet3 is not set
+  CONFIG_PACKAGE_kmod-wireguard=y
   CONFIG_PACKAGE_libatomic=y
   CONFIG_PACKAGE_libattr=y
   CONFIG_PACKAGE_libbpf=y
@@ -169,6 +179,7 @@ config: |
   CONFIG_PACKAGE_libnatpmp=y
   CONFIG_PACKAGE_libnghttp2=y
   CONFIG_PACKAGE_libnvme=y
+  CONFIG_PACKAGE_libopenssl-conf=y
   CONFIG_PACKAGE_libparted=y
   CONFIG_PACKAGE_libreadline=y
   CONFIG_PACKAGE_libseccomp=y
@@ -180,6 +191,7 @@ config: |
   CONFIG_PACKAGE_libxtables=y
   CONFIG_PACKAGE_lsblk=y
   CONFIG_PACKAGE_lua=y
+  CONFIG_PACKAGE_luci-app-adguardhome=y
   CONFIG_PACKAGE_luci-app-argon-config=y
   CONFIG_PACKAGE_luci-app-arpbind=y
   CONFIG_PACKAGE_luci-app-autoreboot=y
@@ -188,11 +200,19 @@ config: |
   CONFIG_PACKAGE_luci-app-diskman=y
   CONFIG_PACKAGE_luci-app-diskman_INCLUDE_btrfs_progs=y
   CONFIG_PACKAGE_luci-app-diskman_INCLUDE_lsblk=y
-  CONFIG_PACKAGE_luci-app-dockerman=y
+  CONFIG_PACKAGE_luci-app-docker=y
   CONFIG_PACKAGE_luci-app-filemanager=y
   CONFIG_PACKAGE_luci-app-irqbalance=y
   CONFIG_PACKAGE_luci-app-mosdns=y
   CONFIG_PACKAGE_luci-app-nikki=y
+  # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Haproxy is not set
+  # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Shadowsocks_Rust_Client is not set
+  # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Shadowsocks_Rust_Server is not set
+  # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Simple_Obfs is not set
+  # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox is not set
+  # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_V2ray_Geoview is not set
+  # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_V2ray_Plugin is not set
+  # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray is not set
   CONFIG_PACKAGE_luci-app-qos=y
   # CONFIG_PACKAGE_luci-app-rclone_INCLUDE_rclone-ng is not set
   # CONFIG_PACKAGE_luci-app-rclone_INCLUDE_rclone-webui is not set
@@ -205,18 +225,28 @@ config: |
   CONFIG_PACKAGE_luci-i18n-argon-config-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-arpbind-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-autoreboot-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-base-ja=y
+  CONFIG_PACKAGE_luci-i18n-cloudflared-ja=y
   CONFIG_PACKAGE_luci-i18n-cloudflared-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-cpulimit-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-diskman-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-dockerman-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-docker-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-filemanager-ja=y
   CONFIG_PACKAGE_luci-i18n-filemanager-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-firewall-ja=y
+  CONFIG_PACKAGE_luci-i18n-irqbalance-ja=y
   CONFIG_PACKAGE_luci-i18n-irqbalance-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-mosdns-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-package-manager-ja=y
+  CONFIG_PACKAGE_luci-i18n-qos-ja=y
   CONFIG_PACKAGE_luci-i18n-qos-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-sqm-ja=y
   CONFIG_PACKAGE_luci-i18n-sqm-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-tailscale-community-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-ttyd-ja=y
   CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-upnp-ja=y
   CONFIG_PACKAGE_luci-i18n-upnp-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-zerotier-zh-cn=y
   CONFIG_PACKAGE_luci-lib-base=y
@@ -224,12 +254,16 @@ config: |
   CONFIG_PACKAGE_luci-lib-jsonc=y
   CONFIG_PACKAGE_luci-lib-nixio=y
   CONFIG_PACKAGE_luci-lua-runtime=y
+  CONFIG_PACKAGE_luci-proto-wireguard=y
+  CONFIG_PACKAGE_luci-ssl-openssl=y
   CONFIG_PACKAGE_luci-theme-argon=y
+  CONFIG_PACKAGE_luci-theme-material=y
   CONFIG_PACKAGE_map=y
   CONFIG_PACKAGE_miniupnpd-nftables=y
   CONFIG_PACKAGE_mosdns=y
   CONFIG_PACKAGE_nikki=y
   CONFIG_PACKAGE_nvme-cli=y
+  CONFIG_PACKAGE_openssl-util=y
   CONFIG_PACKAGE_parted=y
   CONFIG_PACKAGE_qos-scripts=y
   CONFIG_PACKAGE_resolveip=y
@@ -247,6 +281,7 @@ config: |
   CONFIG_PACKAGE_v2ray-geoip=y
   CONFIG_PACKAGE_v2ray-geosite=y
   CONFIG_PACKAGE_vim=y
+  CONFIG_PACKAGE_wireguard-tools=y
   CONFIG_PACKAGE_xtables-nft=y
   CONFIG_PACKAGE_yq=y
   CONFIG_PACKAGE_zerotier=y
@@ -292,6 +327,4 @@ hooks:
     ./scripts/feeds uninstall mosdns
     ./scripts/feeds install -f -p sbwml_mosdns mosdns luci-app-mosdns v2dat
     ./scripts/feeds install -f -p local_feeds v2ray-geoip v2ray-geosite
-  before_compile: |-
-    ./scripts/config --set-str CONFIG_VERSION_CODE "$WRT_TAG"
-    make -j $(($(nproc)+1)) defconfig V=sc
+  before_compile: make -j $(($(nproc)+1)) defconfig V=sc
