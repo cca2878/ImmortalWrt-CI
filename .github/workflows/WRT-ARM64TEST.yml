@@ -82,7 +82,6 @@ env:
   WRT_BRANCH: ${{inputs.WRT_BRANCH}}
   WRT_TEST: ${{inputs.WRT_TEST}}
   WRT_CACHE: ${{inputs.WRT_CACHE}}
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   core:
@@ -141,12 +140,12 @@ jobs:
           echo "========================"
 
       - name: Checkout CI Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: ${{env.PATH_CI}}
           
       - name: Checkout Src Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{env.WRT_REPO}}
           ref: ${{env.WRT_BRANCH}}
@@ -195,7 +194,7 @@ jobs:
       - name: Check Caches
         id: check-cache
         if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
-        uses: actions/cache@main
+        uses: actions/cache@v5
         with:
           key: ${{env.WRT_VER}}-${{env.WRT_CONF}}-${{env.WRT_HASH}}
           path: |
@@ -279,7 +278,7 @@ jobs:
           fi
           
       - name: Upload Firmware
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{env.WRT_VER}}_${{env.WRT_CONF}}_${{env.F_DATE}}
           path: ${{env.PATH_WORKDIR}}/${{env.PATH_SRC}}/upload/*

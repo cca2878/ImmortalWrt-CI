@@ -99,7 +99,6 @@ env:
   WRT_COMMIT: ${{inputs.WRT_COMMIT}}
   WRT_TEST: ${{inputs.WRT_TEST}}
   WRT_CACHE: ${{inputs.WRT_CACHE}}
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   core:
@@ -163,7 +162,7 @@ jobs:
           echo "========================================"
 
       - name: Checkout CI Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: ${{env.PATH_CI}}
 
@@ -210,7 +209,7 @@ jobs:
           echo "Effective branch: $FINAL_BRANCH"
 
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{env.WRT_REPO}}
           ref: ${{env.WRT_BRANCH}}
@@ -350,7 +349,7 @@ jobs:
       - name: Check Caches
         id: check-cache
         if: ${{ env.WRT_TEST != 'true' && env.WRT_CACHE == 'true' }}
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           key: ${{env.CACHE_KEY}}
           restore-keys: |
@@ -626,7 +625,7 @@ jobs:
           echo "Packaging completed!"
 
       - name: Upload Firmware
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{env.WRT_VER}}_${{env.WRT_CONF}}_${{env.F_DATE}}${{env.WRT_COMMIT != '' && format('_commit-{0}', env.WRT_HASH) || ''}}
           path: ${{env.PATH_WORKDIR}}/${{env.PATH_SRC}}/upload/*
