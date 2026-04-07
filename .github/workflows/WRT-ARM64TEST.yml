@@ -82,6 +82,7 @@ env:
   WRT_BRANCH: ${{inputs.WRT_BRANCH}}
   WRT_TEST: ${{inputs.WRT_TEST}}
   WRT_CACHE: ${{inputs.WRT_CACHE}}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   core:
