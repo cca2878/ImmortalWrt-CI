@@ -15,12 +15,14 @@ config: |
   CONFIG_DOCKER_CGROUP_OPTIONS=y
   CONFIG_DOCKER_NET_MACVLAN=y
   CONFIG_DOCKER_STO_EXT4=y
+  CONFIG_DROPBEAR_ZLIB=y
   CONFIG_GCC_DEFAULT_SSP=y
   # CONFIG_GCC_USE_VERSION_14 is not set
   CONFIG_GCC_USE_VERSION_15=y
   CONFIG_GCC_VERSION="15.2.0"
   CONFIG_GCC_VERSION_15=y
   # CONFIG_GDB is not set
+  CONFIG_HTOP_LMSENSORS=y
   CONFIG_IMAGEOPT=y
   CONFIG_KERNEL_BPF_EVENTS=y
   CONFIG_KERNEL_BPF_STREAM_PARSER=y
@@ -41,6 +43,9 @@ config: |
   CONFIG_KERNEL_PERF_EVENTS=y
   CONFIG_KERNEL_PROC_STRIPPED=y
   CONFIG_KERNEL_XDP_SOCKETS=y
+  CONFIG_KERNEL_ZRAM_BACKEND_FORCE_LZO=y
+  CONFIG_KERNEL_ZRAM_BACKEND_LZO=y
+  CONFIG_KERNEL_ZRAM_DEF_COMP_LZORLE=y
   CONFIG_LIBCURL_COOKIES=y
   CONFIG_LIBCURL_CRYPTO_AUTH=y
   CONFIG_LIBCURL_FILE=y
@@ -54,8 +59,9 @@ config: |
   CONFIG_LIBCURL_THREADED_RESOLVER=y
   CONFIG_LIBCURL_TLS_SRP=y
   CONFIG_LIBCURL_UNIX_SOCKETS=y
-  # CONFIG_LUCI_CSSTIDY is not set
   CONFIG_LUCI_LANG_ja=y
+  # CONFIG_LUCI_LANG_zh_Hans is not set
+  CONFIG_LUCI_SRCDIET=y
   CONFIG_NGINX_HTTP_ACCESS=y
   CONFIG_NGINX_HTTP_AUTH_BASIC=y
   CONFIG_NGINX_HTTP_AUTOINDEX=y
@@ -104,6 +110,8 @@ config: |
   CONFIG_PACKAGE_containerd=y
   CONFIG_PACKAGE_cpulimit=y
   CONFIG_PACKAGE_curl=y
+  # CONFIG_PACKAGE_default-settings is not set
+  # CONFIG_PACKAGE_default-settings-chn is not set
   CONFIG_PACKAGE_docker=y
   CONFIG_PACKAGE_docker-compose=y
   CONFIG_PACKAGE_dockerd=y
@@ -113,6 +121,7 @@ config: |
   CONFIG_PACKAGE_exfat-fsck=y
   CONFIG_PACKAGE_exfat-mkfs=y
   CONFIG_PACKAGE_filebrowser=y
+  CONFIG_PACKAGE_htop=y
   CONFIG_PACKAGE_intel-microcode=y
   CONFIG_PACKAGE_ip-full=y
   CONFIG_PACKAGE_ip6tables-nft=y
@@ -166,6 +175,10 @@ config: |
   CONFIG_PACKAGE_kmod-lib-zlib-deflate=y
   CONFIG_PACKAGE_kmod-lib-zlib-inflate=y
   CONFIG_PACKAGE_kmod-lib-zstd=y
+  CONFIG_PACKAGE_kmod-md-mod=y
+  CONFIG_PACKAGE_kmod-md-raid0=y
+  CONFIG_PACKAGE_kmod-md-raid1=y
+  CONFIG_PACKAGE_kmod-md-raid10=y
   CONFIG_PACKAGE_kmod-mlx4-core=y
   CONFIG_PACKAGE_kmod-nat46=y
   CONFIG_PACKAGE_kmod-nf-conncount=y
@@ -199,6 +212,7 @@ config: |
   CONFIG_PACKAGE_kmod-veth=y
   # CONFIG_PACKAGE_kmod-vmxnet3 is not set
   CONFIG_PACKAGE_kmod-wireguard=y
+  CONFIG_PACKAGE_kmod-zram=y
   CONFIG_PACKAGE_libatomic=y
   CONFIG_PACKAGE_libattr=y
   CONFIG_PACKAGE_libbpf=y
@@ -221,6 +235,7 @@ config: |
   CONFIG_PACKAGE_libnvme=y
   CONFIG_PACKAGE_libopenssl-conf=y
   CONFIG_PACKAGE_libparted=y
+  CONFIG_PACKAGE_libpcap=y
   CONFIG_PACKAGE_libpcre2=y
   CONFIG_PACKAGE_libreadline=y
   CONFIG_PACKAGE_librrd1=y
@@ -242,6 +257,7 @@ config: |
   CONFIG_PACKAGE_luci-app-diskman=y
   CONFIG_PACKAGE_luci-app-diskman_INCLUDE_btrfs_progs=y
   CONFIG_PACKAGE_luci-app-diskman_INCLUDE_lsblk=y
+  CONFIG_PACKAGE_luci-app-diskman_INCLUDE_mdadm=y
   CONFIG_PACKAGE_luci-app-dockerman=y
   CONFIG_PACKAGE_luci-app-filebrowser-go=y
   CONFIG_PACKAGE_luci-app-irqbalance=y
@@ -265,45 +281,31 @@ config: |
   CONFIG_PACKAGE_luci-app-upnp=y
   CONFIG_PACKAGE_luci-app-zerotier=y
   CONFIG_PACKAGE_luci-compat=y
-  CONFIG_PACKAGE_luci-i18n-argon-config-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-arpbind-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-autoreboot-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-base-ja=y
+  # CONFIG_PACKAGE_luci-i18n-base-zh-cn is not set
   CONFIG_PACKAGE_luci-i18n-cloudflared-ja=y
-  CONFIG_PACKAGE_luci-i18n-cloudflared-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-cpulimit-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-diskman-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-dockerman-ja=y
-  CONFIG_PACKAGE_luci-i18n-dockerman-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-filebrowser-go-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-firewall-ja=y
+  # CONFIG_PACKAGE_luci-i18n-firewall-zh-cn is not set
   CONFIG_PACKAGE_luci-i18n-irqbalance-ja=y
-  CONFIG_PACKAGE_luci-i18n-irqbalance-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-mosdns-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-package-manager-ja=y
+  # CONFIG_PACKAGE_luci-i18n-package-manager-zh-cn is not set
   CONFIG_PACKAGE_luci-i18n-qos-ja=y
-  CONFIG_PACKAGE_luci-i18n-qos-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-sqm-ja=y
-  CONFIG_PACKAGE_luci-i18n-sqm-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-statistics-ja=y
-  CONFIG_PACKAGE_luci-i18n-statistics-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-tailscale-community-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-ttyd-ja=y
-  CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-upnp-ja=y
-  CONFIG_PACKAGE_luci-i18n-upnp-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-zerotier-zh-cn=y
   CONFIG_PACKAGE_luci-lib-base=y
   CONFIG_PACKAGE_luci-lib-ip=y
   CONFIG_PACKAGE_luci-lib-jsonc=y
   CONFIG_PACKAGE_luci-lib-nixio=y
   CONFIG_PACKAGE_luci-lua-runtime=y
-  CONFIG_PACKAGE_luci-nginx=y
   CONFIG_PACKAGE_luci-proto-wireguard=y
   CONFIG_PACKAGE_luci-ssl-openssl=y
   CONFIG_PACKAGE_luci-theme-argon=y
   CONFIG_PACKAGE_map=y
+  CONFIG_PACKAGE_mdadm=y
+  CONFIG_PACKAGE_mihomo-meta=y
   CONFIG_PACKAGE_miniupnpd-nftables=y
   CONFIG_PACKAGE_mosdns=y
   CONFIG_PACKAGE_nginx-mod-luci=y
@@ -319,9 +321,11 @@ config: |
   CONFIG_PACKAGE_rrdtool1=y
   CONFIG_PACKAGE_runc=y
   CONFIG_PACKAGE_smartmontools=y
+  CONFIG_PACKAGE_speedtest-go=y
   CONFIG_PACKAGE_sqm-scripts=y
   CONFIG_PACKAGE_tailscale=y
   CONFIG_PACKAGE_tc-tiny=y
+  CONFIG_PACKAGE_tcpdump=y
   CONFIG_PACKAGE_tini=y
   CONFIG_PACKAGE_ttyd=y
   CONFIG_PACKAGE_ucode-mod-lua=y
@@ -350,6 +354,7 @@ config: |
   CONFIG_PACKAGE_zoneinfo-indian=y
   CONFIG_PACKAGE_zoneinfo-pacific=y
   CONFIG_PACKAGE_zoneinfo-poles=y
+  CONFIG_PACKAGE_zram-swap=y
   CONFIG_PARTED_READLINE=y
   CONFIG_PCRE2_JIT_ENABLED=y
   # CONFIG_PER_FEED_REPO is not set
