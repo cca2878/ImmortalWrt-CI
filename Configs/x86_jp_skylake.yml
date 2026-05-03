@@ -60,7 +60,6 @@ config: |
   CONFIG_LIBCURL_TLS_SRP=y
   CONFIG_LIBCURL_UNIX_SOCKETS=y
   CONFIG_LUCI_LANG_ja=y
-  # CONFIG_LUCI_LANG_zh_Hans is not set
   CONFIG_LUCI_SRCDIET=y
   CONFIG_NGINX_HTTP_ACCESS=y
   CONFIG_NGINX_HTTP_AUTH_BASIC=y
@@ -110,7 +109,6 @@ config: |
   CONFIG_PACKAGE_containerd=y
   CONFIG_PACKAGE_cpulimit=y
   CONFIG_PACKAGE_curl=y
-  # CONFIG_PACKAGE_default-settings is not set
   # CONFIG_PACKAGE_default-settings-chn is not set
   CONFIG_PACKAGE_docker=y
   CONFIG_PACKAGE_docker-compose=y
@@ -281,20 +279,35 @@ config: |
   CONFIG_PACKAGE_luci-app-upnp=y
   CONFIG_PACKAGE_luci-app-zerotier=y
   CONFIG_PACKAGE_luci-compat=y
+  CONFIG_PACKAGE_luci-i18n-argon-config-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-arpbind-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-autoreboot-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-base-ja=y
-  # CONFIG_PACKAGE_luci-i18n-base-zh-cn is not set
   CONFIG_PACKAGE_luci-i18n-cloudflared-ja=y
+  CONFIG_PACKAGE_luci-i18n-cloudflared-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-cpulimit-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-diskman-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-dockerman-ja=y
+  CONFIG_PACKAGE_luci-i18n-dockerman-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-filebrowser-go-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-firewall-ja=y
-  # CONFIG_PACKAGE_luci-i18n-firewall-zh-cn is not set
   CONFIG_PACKAGE_luci-i18n-irqbalance-ja=y
+  CONFIG_PACKAGE_luci-i18n-irqbalance-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-mosdns-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-package-manager-ja=y
-  # CONFIG_PACKAGE_luci-i18n-package-manager-zh-cn is not set
   CONFIG_PACKAGE_luci-i18n-qos-ja=y
+  CONFIG_PACKAGE_luci-i18n-qos-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-sqm-ja=y
+  CONFIG_PACKAGE_luci-i18n-sqm-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-statistics-ja=y
+  CONFIG_PACKAGE_luci-i18n-statistics-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-tailscale-community-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-ttyd-ja=y
+  CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-upnp-ja=y
+  CONFIG_PACKAGE_luci-i18n-upnp-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-zerotier-zh-cn=y
   CONFIG_PACKAGE_luci-lib-base=y
   CONFIG_PACKAGE_luci-lib-ip=y
   CONFIG_PACKAGE_luci-lib-jsonc=y
@@ -374,6 +387,29 @@ config: |
   CONFIG_USE_GC_SECTIONS=y
   CONFIG_USE_LTO=y
   CONFIG_USE_MOLD=y
+  CONFIG_LUCI_LANG_zh_Hans=y
+  CONFIG_PACKAGE_default-settings=y
+  CONFIG_PACKAGE_luci-i18n-argon-config-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-arpbind-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-autoreboot-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-cloudflared-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-cpulimit-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-diskman-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-dockerman-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-filebrowser-go-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-irqbalance-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-mosdns-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-package-manager-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-qos-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-sqm-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-statistics-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-tailscale-community-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-upnp-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-zerotier-zh-cn=y
 feeds: |
   src-git sbwml_mosdns https://github.com/sbwml/luci-app-mosdns.git;v5
   src-git nikki https://github.com/nikkinikki-org/OpenWrt-nikki.git;main
