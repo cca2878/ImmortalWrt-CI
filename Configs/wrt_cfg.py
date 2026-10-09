@@ -15,8 +15,13 @@ yml_file = sys.argv[2]
 try:
     with open(yml_file) as f:
         cfg = yaml.safe_load(f) or {}
-except (FileNotFoundError, yaml.YAMLError):
-    cfg = {}
+except (OSError, yaml.YAMLError) as exc:
+    print(f"Cannot read config {yml_file}: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+if not isinstance(cfg, dict):
+    print(f"Config {yml_file} must contain a YAML mapping", file=sys.stderr)
+    sys.exit(1)
 
 if cmd == 'get':
     val = cfg

@@ -6,7 +6,6 @@ on:
     inputs:
       WRT_CONF:
         description: '配置名 (Configs/<WRT_CONF>.yml)'
-        default: 'x86'
         required: true
         type: string
       WRT_REPO:
@@ -91,6 +90,7 @@ env:
   PATH_WORKDIR: ${{inputs.PATH_MOUNT}}/work
   PATH_CI: ci
   PATH_SRC: opwrt_src
+  PATH_DIAGNOSTICS: ${{inputs.PATH_MOUNT}}/work/diagnostics
 
   WRT_CONF: ${{inputs.WRT_CONF}}
   WRT_TAGCONF: ${{inputs.WRT_TAGCONF}}
@@ -103,18 +103,18 @@ env:
 jobs:
   core:
     name: CONTAINER_${{inputs.WRT_CONF}}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       actions: write
     container:
-      image: ubuntu:latest
+      image: ubuntu:24.04
       volumes:
         - /mnt:${{inputs.PATH_MOUNT}}
       options: --env TZ=Asia/Shanghai
     defaults:
       run:
-        shell: su ubuntu -c "bash {0}"
+        shell: su ubuntu -c "bash --noprofile --norc -e -o pipefail {0}"
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -130,16 +130,15 @@ jobs:
           dpkg-reconfigure --frontend noninteractive tzdata
 
           echo "Configuring ubuntu user..."
-          passwd -d ubuntu
+          id ubuntu >/dev/null 2>&1 || useradd -m -s /bin/bash ubuntu
 
           echo "Setting up work directory..."
-          if [ -d $PATH_WORKDIR ]; then
+          if [ -d "$PATH_WORKDIR" ]; then
             echo "Removing existing work directory..."
-            rm -rf $PATH_WORKDIR
+            rm -rf "$PATH_WORKDIR"
           fi
-          mkdir $PATH_WORKDIR
-          chmod -R 775 $PATH_WORKDIR
-          chown -R ubuntu $PATH_WORKDIR
+          mkdir -p "$PATH_WORKDIR" "$PATH_DIAGNOSTICS"
+          chown -R ubuntu:ubuntu "$PATH_WORKDIR"
           echo "System initialization completed!"
 
       - name: Container Information
@@ -274,17 +273,18 @@ jobs:
           echo "====================================="
 
       - name: Prepare Source Code
+        shell: bash
         run: |
           echo "=====Preparing Source Code====="
-          cp -r $GITHUB_WORKSPACE/$PATH_CI $PATH_WORKDIR/$PATH_CI
-          cp -r $GITHUB_WORKSPACE/$PATH_SRC $PATH_WORKDIR/$PATH_SRC
+          cp -a "$GITHUB_WORKSPACE/$PATH_CI" "$PATH_WORKDIR/$PATH_CI"
+          cp -a "$GITHUB_WORKSPACE/$PATH_SRC" "$PATH_WORKDIR/$PATH_SRC"
 
           echo "Cleaning up GitHub workspace..."
-          sudo rm -rf $GITHUB_WORKSPACE/$PATH_CI
-          sudo rm -rf $GITHUB_WORKSPACE/$PATH_SRC
+          rm -rf "$GITHUB_WORKSPACE/$PATH_CI" "$GITHUB_WORKSPACE/$PATH_SRC"
 
           echo "Setting file permissions..."
-          find $PATH_WORKDIR/$PATH_CI -type f -iregex '.*(txt|sh)$' -exec dos2unix {} \; -exec chmod 777 {} \;
+          find "$PATH_WORKDIR/$PATH_CI" -type f \( -name '*.txt' -o -name '*.sh' \) -exec dos2unix {} +
+          chown -R ubuntu:ubuntu "$PATH_WORKDIR"
           echo "Source code preparation completed!"
 
       # ── Hook 1: After code clone ─────────────────────────────────────────
@@ -297,8 +297,10 @@ jobs:
             if [ -n "$HOOK_SCRIPT" ]; then
               echo "Running after_clone hook ..."
               HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
-              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
-              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              trap 'rm -f "$HOOK_TMP"' EXIT
+              printf '#!/bin/bash\nset -e\nset -o pipefail\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd "$PATH_WORKDIR/$PATH_SRC"
+              bash "$HOOK_TMP" 2>&1 | tee "$PATH_DIAGNOSTICS/hook-after_clone.log"
               echo "after_clone hook completed!"
             else
               echo "No after_clone hook defined (skipping)"
@@ -308,15 +310,21 @@ jobs:
           fi
 
       - name: Initialize Build Environment
+        shell: bash
         run: |
           echo "=====Initializing Build Environment====="
-          sudo apt -yqq full-upgrade
-          sudo apt -yqq autoremove --purge
-          sudo apt -yqq autoclean
-          sudo apt -yqq clean
+          # Run privileged setup directly as container root. Compile as ubuntu.
+          # Pin the setup script independently of the selected firmware source.
+          SETUP_REV=04a39ca00d2cd6895c84e1c0670bc719cbd8d9fb
+          SETUP_SCRIPT="$PATH_DIAGNOSTICS/init_build_environment.sh"
+          curl -fSL --retry 3 --connect-timeout 20 \
+            "https://raw.githubusercontent.com/immortalwrt/build-scripts/$SETUP_REV/init_build_environment.sh" \
+            -o "$SETUP_SCRIPT"
+          bash "$SETUP_SCRIPT" 2>&1 | tee "$PATH_DIAGNOSTICS/build-environment.log"
 
-          echo "Installing ImmortalWrt build environment..."
-          sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          for tool in make gcc g++ git perl patch rsync unzip tar xz bzip2 python3 clang; do
+            command -v "$tool" || { echo "::error::Missing build dependency: $tool"; exit 1; }
+          done
           echo "Build environment initialized!"
 
       - name: Generate Cache Key
@@ -433,8 +441,10 @@ jobs:
             if [ -n "$HOOK_SCRIPT" ]; then
               echo "Running before_feeds_update hook ..."
               HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
-              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
-              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              trap 'rm -f "$HOOK_TMP"' EXIT
+              printf '#!/bin/bash\nset -e\nset -o pipefail\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd "$PATH_WORKDIR/$PATH_SRC"
+              bash "$HOOK_TMP" 2>&1 | tee "$PATH_DIAGNOSTICS/hook-before_feeds_update.log"
               echo "before_feeds_update hook completed!"
             else
               echo "No before_feeds_update hook defined (skipping)"
@@ -447,7 +457,7 @@ jobs:
         run: |
           echo "=====Updating Feeds====="
           cd $PATH_WORKDIR/$PATH_SRC
-          ./scripts/feeds update -a
+          ./scripts/feeds update -a 2>&1 | tee "$PATH_DIAGNOSTICS/feeds-update.log"
           echo "Feeds update completed!"
 
       # ── Hook 3: After update, before install ─────────────────────────────
@@ -460,8 +470,10 @@ jobs:
             if [ -n "$HOOK_SCRIPT" ]; then
               echo "Running after_feeds_update hook ..."
               HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
-              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
-              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              trap 'rm -f "$HOOK_TMP"' EXIT
+              printf '#!/bin/bash\nset -e\nset -o pipefail\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd "$PATH_WORKDIR/$PATH_SRC"
+              bash "$HOOK_TMP" 2>&1 | tee "$PATH_DIAGNOSTICS/hook-after_feeds_update.log"
               echo "after_feeds_update hook completed!"
             else
               echo "No after_feeds_update hook defined (skipping)"
@@ -474,7 +486,7 @@ jobs:
         run: |
           echo "=====Installing Feeds====="
           cd $PATH_WORKDIR/$PATH_SRC
-          ./scripts/feeds install -a
+          ./scripts/feeds install -a 2>&1 | tee "$PATH_DIAGNOSTICS/feeds-install.log"
           echo "Feeds install completed!"
 
       # ── Hook 4: After install ─────────────────────────────────────────────
@@ -487,8 +499,10 @@ jobs:
             if [ -n "$HOOK_SCRIPT" ]; then
               echo "Running after_feeds_install hook ..."
               HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
-              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
-              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              trap 'rm -f "$HOOK_TMP"' EXIT
+              printf '#!/bin/bash\nset -e\nset -o pipefail\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd "$PATH_WORKDIR/$PATH_SRC"
+              bash "$HOOK_TMP" 2>&1 | tee "$PATH_DIAGNOSTICS/hook-after_feeds_install.log"
               echo "after_feeds_install hook completed!"
             else
               echo "No after_feeds_install hook defined (skipping)"
@@ -518,18 +532,21 @@ jobs:
                 cat "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" >> .config
                 echo "Config applied from Simple/Config/$WRT_CONF.txt (fallback)"
               else
-                echo "No config content found for '$WRT_CONF', using default config"
+                echo "::error::No config content found for '$WRT_CONF'"
+                exit 1
               fi
             fi
           elif [ -f "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" ]; then
             cat "$PATH_WORKDIR/$PATH_CI/Simple/Config/$WRT_CONF.txt" >> .config
             echo "Config applied from Simple/Config/$WRT_CONF.txt (fallback)"
           else
-            echo "No config content found for '$WRT_CONF', using default config"
+            echo "::error::No config content found for '$WRT_CONF'"
+            exit 1
           fi
 
           echo "Generating default configuration..."
-          make -j $(($(nproc)+1)) defconfig V=sc
+          cp .config "$PATH_DIAGNOSTICS/seed.config"
+          make defconfig V=sc 2>&1 | tee "$PATH_DIAGNOSTICS/defconfig.log"
           echo "Config applied!"
 
       # ── Hook 5: Before compilation starts ────────────────────────────────
@@ -542,8 +559,10 @@ jobs:
             if [ -n "$HOOK_SCRIPT" ]; then
               echo "Running before_compile hook ..."
               HOOK_TMP=$(mktemp /tmp/hook_XXXXXX.sh)
-              printf '#!/bin/bash\nset -e\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
-              cd $PATH_WORKDIR/$PATH_SRC && bash "$HOOK_TMP"; rm -f "$HOOK_TMP"
+              trap 'rm -f "$HOOK_TMP"' EXIT
+              printf '#!/bin/bash\nset -e\nset -o pipefail\n%s\n' "$HOOK_SCRIPT" > "$HOOK_TMP"
+              cd "$PATH_WORKDIR/$PATH_SRC"
+              bash "$HOOK_TMP" 2>&1 | tee "$PATH_DIAGNOSTICS/hook-before_compile.log"
               echo "before_compile hook completed!"
             else
               echo "No before_compile hook defined (skipping)"
@@ -552,59 +571,69 @@ jobs:
             echo "No config file found (skipping)"
           fi
 
+      - name: Record Build Inputs and Check Prerequisites
+        run: |
+          cd "$PATH_WORKDIR/$PATH_SRC"
+          cp .config "$PATH_DIAGNOSTICS/full.config"
+          cp feeds.conf.default "$PATH_DIAGNOSTICS/feeds.conf.default"
+          ./scripts/diffconfig.sh > "$PATH_DIAGNOSTICS/diff.config"
+          {
+            echo "CI commit: $GITHUB_SHA"
+            echo "Source: $WRT_REPO $WRT_BRANCH $WRT_FULL_HASH"
+            echo "Profile: $WRT_CONF"
+            echo "Cache requested: $WRT_CACHE"
+            echo "Container: ubuntu:24.04"
+            cat /etc/os-release
+            make --version
+            gcc --version
+            clang --version
+            sha256sum "$PATH_DIAGNOSTICS/init_build_environment.sh" .config
+            for feed in feeds/* custom_feeds/*; do
+              if [ -d "$feed/.git" ] || [ -f "$feed/.git" ]; then
+                echo "Feed: $feed"
+                git -C "$feed" rev-parse HEAD
+                git -C "$feed" remote -v
+              fi
+            done
+          } > "$PATH_DIAGNOSTICS/build-inputs.txt"
+          make -j 1 prereq V=sc 2>&1 | tee "$PATH_DIAGNOSTICS/prerequisites.log"
+
       - name: Download Packages
         if: env.WRT_TEST != 'true'
         run: |
           echo "=====Downloading Packages====="
           cd $PATH_WORKDIR/$PATH_SRC
-          make -j $(($(nproc)+1)) download V=w
+          make -j $(($(nproc)+1)) download V=w 2>&1 | tee "$PATH_DIAGNOSTICS/download.log"
           echo "Package download completed!"
 
-      - name: Compile Firmware (Adaptive)
+      - name: Compile Firmware
         if: env.WRT_TEST != 'true'
         id: compile
         continue-on-error: true
         run: |
-          echo "=====Compiling Firmware ($BUILD_STRATEGY mode)====="
-          echo "$CCACHE_DIR"
-          echo "$CCACHE_COMPRESS"
-          cd $PATH_WORKDIR/$PATH_SRC
+          cd "$PATH_WORKDIR/$PATH_SRC"
           echo "Compilation started at: $(date -Iseconds)"
-
-          if [ "$BUILD_STRATEGY" = "fast" ]; then
-            echo "Fast compilation with cache"
-            make -j $(($(nproc)+1)) V=w
-          else
-            echo "Standard compilation"
-            make -j $(($(nproc)+1)) V=w
-          fi
+          make -j $(($(nproc)+1)) V=w 2>&1 | tee "$PATH_DIAGNOSTICS/compile.log"
 
       - name: Compile Firmware (Single-threaded for Error Analysis)
         if: env.WRT_TEST != 'true' && steps.compile.outcome == 'failure'
+        id: compile-single
         run: |
-          echo "=====Compiling Firmware (Single-threaded for Error Analysis)====="
-          cd $PATH_WORKDIR/$PATH_SRC
-          echo "Multi-threaded compilation failed, starting single-threaded compilation for detailed error analysis..."
-          make -j 1 V=sc
+          cd "$PATH_WORKDIR/$PATH_SRC"
+          echo "Multi-threaded compilation failed; retrying with detailed logs..."
+          make -j 1 V=sc 2>&1 | tee "$PATH_DIAGNOSTICS/compile-single.log"
 
       - name: Check Compilation Result
         if: env.WRT_TEST != 'true'
+        env:
+          PARALLEL_OUTCOME: ${{steps.compile.outcome}}
+          SINGLE_OUTCOME: ${{steps.compile-single.outcome}}
         run: |
-          echo "=====Checking Compilation Result====="
-          cd $PATH_WORKDIR/$PATH_SRC
-
-          if [ "${{ steps.compile.outcome }}" = "success" ]; then
-            echo "Multi-threaded compilation completed successfully!"
-          elif [ "${{ steps.compile.outcome }}" = "failure" ]; then
-            echo "Multi-threaded compilation failed, single-threaded may have succeeded."
-
-            if find ./bin/targets/ -name "*.bin" -o -name "*.img" -o -name "*.tar" 2>/dev/null | grep -q .; then
-              echo "Single-threaded compilation produced firmware files."
-            else
-              echo "ERROR: Single-threaded compilation also failed - no firmware files found."
-              echo "::warning::Compilation completed with errors - please check logs for details"
-              exit 1
-            fi
+          if [ "$PARALLEL_OUTCOME" = "success" ] || [ "$SINGLE_OUTCOME" = "success" ]; then
+            echo "Firmware compilation completed successfully."
+          else
+            echo "::error::Firmware compilation failed; see the diagnostics artifact."
+            exit 1
           fi
 
       - name: Package Firmware
@@ -630,3 +659,25 @@ jobs:
           name: ${{env.WRT_VER}}_${{env.WRT_CONF}}_${{env.F_DATE}}${{env.WRT_COMMIT != '' && format('_commit-{0}', env.WRT_HASH) || ''}}
           path: ${{env.PATH_WORKDIR}}/${{env.PATH_SRC}}/upload/*
           if-no-files-found: error
+
+      - name: Collect Build Diagnostics
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          if [ -d "$PATH_DIAGNOSTICS" ]; then
+            if [ -f "$PATH_WORKDIR/$PATH_SRC/.config" ]; then
+              cp "$PATH_WORKDIR/$PATH_SRC/.config" "$PATH_DIAGNOSTICS/full.config"
+            fi
+            if [ -d "$PATH_WORKDIR/$PATH_SRC/logs" ]; then
+              cp -a "$PATH_WORKDIR/$PATH_SRC/logs" "$PATH_DIAGNOSTICS/package-logs"
+            fi
+          fi
+
+      - name: Upload Build Diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: diagnostics_${{env.WRT_CONF}}_${{github.run_id}}_${{github.run_attempt}}
+          path: ${{env.PATH_DIAGNOSTICS}}/
+          if-no-files-found: warn
+          retention-days: 90
