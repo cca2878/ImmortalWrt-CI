@@ -10,8 +10,6 @@ config: |
   CONFIG_TOOLCHAINOPTS=y
   # CONFIG_BINUTILS_USE_VERSION_2_44 is not set
   CONFIG_BINUTILS_USE_VERSION_2_45=y
-  CONFIG_BINUTILS_VERSION="2.45.1"
-  CONFIG_BINUTILS_VERSION_2_45=y
   CONFIG_DOCKER_CGROUP_OPTIONS=y
   CONFIG_DOCKER_NET_MACVLAN=y
   CONFIG_DOCKER_STO_EXT4=y
@@ -19,30 +17,17 @@ config: |
   CONFIG_GCC_DEFAULT_SSP=y
   # CONFIG_GCC_USE_VERSION_14 is not set
   CONFIG_GCC_USE_VERSION_15=y
-  CONFIG_GCC_VERSION="15.2.0"
-  CONFIG_GCC_VERSION_15=y
   # CONFIG_GDB is not set
   CONFIG_HTOP_LMSENSORS=y
   CONFIG_IMAGEOPT=y
-  CONFIG_KERNEL_BPF_EVENTS=y
-  CONFIG_KERNEL_BPF_STREAM_PARSER=y
+  CONFIG_INCLUDE_CONFIG=y
+  CONFIG_GRUB_TIMEOUT="3"
+  CONFIG_PKG_CC_STACKPROTECTOR_STRONG=y
+  CONFIG_KERNEL_CC_STACKPROTECTOR_STRONG=y
   CONFIG_KERNEL_BUILD_DOMAIN="build-host"
   CONFIG_KERNEL_BUILD_USER="build-user"
-  CONFIG_KERNEL_CGROUP_DEVICE=y
-  CONFIG_KERNEL_CGROUP_FREEZER=y
-  CONFIG_KERNEL_CGROUP_NET_PRIO=y
   # CONFIG_KERNEL_DEBUG_INFO is not set
-  CONFIG_KERNEL_EROFS_FS=y
-  CONFIG_KERNEL_EROFS_FS_ZIP=y
-  CONFIG_KERNEL_EROFS_FS_ZIP_LZMA=y
-  CONFIG_KERNEL_FTRACE=y
-  CONFIG_KERNEL_KPROBES=y
-  CONFIG_KERNEL_KPROBE_EVENTS=y
-  CONFIG_KERNEL_NETKIT=y
-  CONFIG_KERNEL_NET_CLS_CGROUP=y
-  CONFIG_KERNEL_PERF_EVENTS=y
   CONFIG_KERNEL_PROC_STRIPPED=y
-  CONFIG_KERNEL_XDP_SOCKETS=y
   CONFIG_KERNEL_ZRAM_BACKEND_FORCE_LZO=y
   CONFIG_KERNEL_ZRAM_BACKEND_LZO=y
   CONFIG_KERNEL_ZRAM_DEF_COMP_LZORLE=y
@@ -61,38 +46,9 @@ config: |
   CONFIG_LIBCURL_UNIX_SOCKETS=y
   CONFIG_LUCI_LANG_ja=y
   CONFIG_LUCI_SRCDIET=y
-  CONFIG_NGINX_HTTP_ACCESS=y
-  CONFIG_NGINX_HTTP_AUTH_BASIC=y
-  CONFIG_NGINX_HTTP_AUTOINDEX=y
-  CONFIG_NGINX_HTTP_BROWSER=y
-  CONFIG_NGINX_HTTP_CACHE=y
-  CONFIG_NGINX_HTTP_CHARSET=y
-  CONFIG_NGINX_HTTP_EMPTY_GIF=y
-  CONFIG_NGINX_HTTP_FASTCGI=y
-  CONFIG_NGINX_HTTP_GEO=y
-  CONFIG_NGINX_HTTP_GZIP=y
-  CONFIG_NGINX_HTTP_GZIP_STATIC=y
-  CONFIG_NGINX_HTTP_LIMIT_CONN=y
-  CONFIG_NGINX_HTTP_LIMIT_REQ=y
-  CONFIG_NGINX_HTTP_MAP=y
-  CONFIG_NGINX_HTTP_MEMCACHED=y
-  CONFIG_NGINX_HTTP_PROXY=y
-  CONFIG_NGINX_HTTP_REFERER=y
-  CONFIG_NGINX_HTTP_REWRITE=y
-  CONFIG_NGINX_HTTP_SCGI=y
-  CONFIG_NGINX_HTTP_SPLIT_CLIENTS=y
-  CONFIG_NGINX_HTTP_SSI=y
-  CONFIG_NGINX_HTTP_UPSTREAM_HASH=y
-  CONFIG_NGINX_HTTP_UPSTREAM_IP_HASH=y
-  CONFIG_NGINX_HTTP_UPSTREAM_KEEPALIVE=y
-  CONFIG_NGINX_HTTP_UPSTREAM_LEAST_CONN=y
-  CONFIG_NGINX_HTTP_USERID=y
-  CONFIG_NGINX_HTTP_UWSGI=y
-  CONFIG_NGINX_HTTP_V2=y
-  CONFIG_NGINX_PCRE=y
   CONFIG_PACKAGE_7z=y
   CONFIG_PACKAGE_adguardhome=y
-  CONFIG_PACKAGE_amd64-microcode=y
+  # CONFIG_PACKAGE_amd64-microcode is not set
   CONFIG_PACKAGE_blkid=y
   # CONFIG_PACKAGE_bnx2-firmware is not set
   CONFIG_PACKAGE_btrfs-progs=y
@@ -259,8 +215,8 @@ config: |
   CONFIG_PACKAGE_luci-app-dockerman=y
   CONFIG_PACKAGE_luci-app-filebrowser-go=y
   CONFIG_PACKAGE_luci-app-irqbalance=y
-  CONFIG_PACKAGE_luci-app-mosdns=y
-  CONFIG_PACKAGE_luci-app-nikki=y
+  # CONFIG_PACKAGE_luci-app-mosdns is not set
+  # CONFIG_PACKAGE_luci-app-nikki is not set
   # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Haproxy is not set
   # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Shadowsocks_Rust_Client is not set
   # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Shadowsocks_Rust_Server is not set
@@ -272,7 +228,7 @@ config: |
   CONFIG_PACKAGE_luci-app-qos=y
   # CONFIG_PACKAGE_luci-app-rclone_INCLUDE_rclone-ng is not set
   # CONFIG_PACKAGE_luci-app-rclone_INCLUDE_rclone-webui is not set
-  CONFIG_PACKAGE_luci-app-sqm=y
+  # CONFIG_PACKAGE_luci-app-sqm is not set
   CONFIG_PACKAGE_luci-app-statistics=y
   CONFIG_PACKAGE_luci-app-tailscale-community=y
   CONFIG_PACKAGE_luci-app-ttyd=y
@@ -293,13 +249,13 @@ config: |
   CONFIG_PACKAGE_luci-i18n-firewall-ja=y
   CONFIG_PACKAGE_luci-i18n-irqbalance-ja=y
   CONFIG_PACKAGE_luci-i18n-irqbalance-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-mosdns-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y
+  # CONFIG_PACKAGE_luci-i18n-mosdns-zh-cn is not set
+  # CONFIG_PACKAGE_luci-i18n-nikki-zh-cn is not set
   CONFIG_PACKAGE_luci-i18n-package-manager-ja=y
   CONFIG_PACKAGE_luci-i18n-qos-ja=y
   CONFIG_PACKAGE_luci-i18n-qos-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-sqm-ja=y
-  CONFIG_PACKAGE_luci-i18n-sqm-zh-cn=y
+  # CONFIG_PACKAGE_luci-i18n-sqm-ja is not set
+  # CONFIG_PACKAGE_luci-i18n-sqm-zh-cn is not set
   CONFIG_PACKAGE_luci-i18n-statistics-ja=y
   CONFIG_PACKAGE_luci-i18n-statistics-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-tailscale-community-zh-cn=y
@@ -318,14 +274,14 @@ config: |
   CONFIG_PACKAGE_luci-theme-argon=y
   CONFIG_PACKAGE_map=y
   CONFIG_PACKAGE_mdadm=y
-  CONFIG_PACKAGE_mihomo-meta=y
+  # CONFIG_PACKAGE_mihomo-meta is not set
   CONFIG_PACKAGE_miniupnpd-nftables=y
-  CONFIG_PACKAGE_mosdns=y
-  CONFIG_PACKAGE_nginx-mod-luci=y
-  CONFIG_PACKAGE_nginx-mod-ubus=y
-  CONFIG_PACKAGE_nginx-ssl=y
-  CONFIG_PACKAGE_nginx-ssl-util=y
-  CONFIG_PACKAGE_nikki=y
+  # CONFIG_PACKAGE_mosdns is not set
+  # CONFIG_PACKAGE_nginx-mod-luci is not set
+  # CONFIG_PACKAGE_nginx-mod-ubus is not set
+  # CONFIG_PACKAGE_nginx-ssl is not set
+  # CONFIG_PACKAGE_nginx-ssl-util is not set
+  # CONFIG_PACKAGE_nikki is not set
   CONFIG_PACKAGE_nvme-cli=y
   CONFIG_PACKAGE_openssl-util=y
   CONFIG_PACKAGE_parted=y
@@ -335,7 +291,7 @@ config: |
   CONFIG_PACKAGE_runc=y
   CONFIG_PACKAGE_smartmontools=y
   CONFIG_PACKAGE_speedtest-go=y
-  CONFIG_PACKAGE_sqm-scripts=y
+  # CONFIG_PACKAGE_sqm-scripts is not set
   CONFIG_PACKAGE_tailscale=y
   CONFIG_PACKAGE_tc-tiny=y
   CONFIG_PACKAGE_tcpdump=y
@@ -344,13 +300,13 @@ config: |
   CONFIG_PACKAGE_ucode-mod-lua=y
   CONFIG_PACKAGE_ucode-mod-socket=y
   CONFIG_PACKAGE_unzip=y
-  CONFIG_PACKAGE_uwsgi=y
-  CONFIG_PACKAGE_uwsgi-cgi-plugin=y
-  CONFIG_PACKAGE_uwsgi-luci-support=y
-  CONFIG_PACKAGE_uwsgi-syslog-plugin=y
-  CONFIG_PACKAGE_v2dat=y
-  CONFIG_PACKAGE_v2ray-geoip=y
-  CONFIG_PACKAGE_v2ray-geosite=y
+  # CONFIG_PACKAGE_uwsgi is not set
+  # CONFIG_PACKAGE_uwsgi-cgi-plugin is not set
+  # CONFIG_PACKAGE_uwsgi-luci-support is not set
+  # CONFIG_PACKAGE_uwsgi-syslog-plugin is not set
+  # CONFIG_PACKAGE_v2dat is not set
+  # CONFIG_PACKAGE_v2ray-geoip is not set
+  # CONFIG_PACKAGE_v2ray-geosite is not set
   CONFIG_PACKAGE_vim=y
   CONFIG_PACKAGE_wireguard-tools=y
   CONFIG_PACKAGE_xtables-nft=y
@@ -389,40 +345,84 @@ config: |
   CONFIG_USE_MOLD=y
   CONFIG_LUCI_LANG_zh_Hans=y
   CONFIG_PACKAGE_default-settings=y
-  CONFIG_PACKAGE_luci-i18n-argon-config-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-arpbind-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-autoreboot-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-cloudflared-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-cpulimit-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-diskman-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-dockerman-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-filebrowser-go-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-irqbalance-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-mosdns-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-nikki-zh-cn=y
   CONFIG_PACKAGE_luci-i18n-package-manager-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-qos-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-sqm-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-statistics-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-tailscale-community-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-upnp-zh-cn=y
-  CONFIG_PACKAGE_luci-i18n-zerotier-zh-cn=y
-feeds: |
-  src-git sbwml_mosdns https://github.com/sbwml/luci-app-mosdns.git;v5
-  src-git nikki https://github.com/nikkinikki-org/OpenWrt-nikki.git;main
+  CONFIG_PACKAGE_kmod-e1000e=y
+  CONFIG_PACKAGE_kmod-fs-f2fs=y
+  CONFIG_PACKAGE_uhttpd=y
+  CONFIG_PACKAGE_uhttpd-mod-ubus=y
+feeds: ""
 hooks:
   after_clone: ""
-  before_feeds_update: |-
-    mkdir -p custom_feeds/v2ray-geodata
-    git clone https://github.com/sbwml/v2ray-geodata custom_feeds/v2ray-geodata
-    echo "src-link local_feeds ../custom_feeds" >> feeds.conf.default
+  before_feeds_update: ""
   after_feeds_update: ""
-  after_feeds_install: |-
-    ./scripts/feeds update sbwml_mosdns local_feeds
-    ./scripts/feeds uninstall mosdns
-    ./scripts/feeds install -f -p sbwml_mosdns mosdns luci-app-mosdns v2dat
-    ./scripts/feeds install -f -p local_feeds v2ray-geoip v2ray-geosite
-  before_compile: make -j $(($(nproc)+1)) defconfig V=sc
+  after_feeds_install: ""
+  before_compile: |
+    python3 - <<'PYCONF'
+    from pathlib import Path
+    import sys
+
+    # Validate the effective configuration after make defconfig, not the seed.
+    required = {
+        'CONFIG_TARGET_x86_64': 'y',
+        'CONFIG_TARGET_x86_64_DEVICE_generic': 'y',
+        'CONFIG_PACKAGE_kmod-mlx4-core': 'y',
+        'CONFIG_PACKAGE_kmod-e1000e': 'y',
+        'CONFIG_PACKAGE_intel-microcode': 'y',
+        'CONFIG_PACKAGE_map': 'y',
+        'CONFIG_IPV6': 'y',
+        'CONFIG_PACKAGE_kmod-fs-f2fs': 'y',
+        'CONFIG_PACKAGE_kmod-fs-btrfs': 'y',
+        'CONFIG_TARGET_ROOTFS_EROFS': 'y',
+        'CONFIG_TARGET_KERNEL_PARTSIZE': '128',
+        'CONFIG_TARGET_ROOTFS_PARTSIZE': '1024',
+        'CONFIG_GRUB_EFI_IMAGES': 'y',
+        'CONFIG_GRUB_TIMEOUT': '"3"',
+        'CONFIG_INCLUDE_CONFIG': 'y',
+        'CONFIG_PKG_CC_STACKPROTECTOR_STRONG': 'y',
+        'CONFIG_KERNEL_CC_STACKPROTECTOR_STRONG': 'y',
+        'CONFIG_GCC_USE_VERSION_15': 'y',
+        'CONFIG_BINUTILS_USE_VERSION_2_45': 'y',
+        'CONFIG_PACKAGE_dockerd': 'y',
+        'CONFIG_KERNEL_CGROUP_BPF': 'y',
+        'CONFIG_PACKAGE_adguardhome': 'y',
+        'CONFIG_PACKAGE_tailscale': 'y',
+        'CONFIG_PACKAGE_zerotier': 'y',
+        'CONFIG_PACKAGE_cloudflared': 'y',
+        'CONFIG_PACKAGE_luci-ssl-openssl': 'y',
+        'CONFIG_PACKAGE_uhttpd': 'y',
+        'CONFIG_PACKAGE_uhttpd-mod-ubus': 'y',
+        'CONFIG_PACKAGE_irqbalance': 'y',
+        'CONFIG_PACKAGE_luci-app-adguardhome': 'y',
+        'CONFIG_PACKAGE_luci-app-tailscale-community': 'y',
+        'CONFIG_PACKAGE_luci-app-zerotier': 'y',
+        'CONFIG_PACKAGE_luci-app-cloudflared': 'y',
+    }
+    actual = {}
+    for line in Path('.config').read_text().splitlines():
+        if line.startswith('CONFIG_') and '=' in line:
+            key, value = line.split('=', 1)
+            actual[key] = value
+    errors = []
+    for key, expected in required.items():
+        value = actual.get(key, 'n')
+        if value != expected:
+            errors.append(f'{key}: expected {expected}, got {value}')
+    for package in ('nginx', 'nginx-ssl', 'nginx-util', 'uwsgi',
+                    'luci-app-nikki', 'mihomo-meta', 'mosdns', 'luci-app-mosdns',
+                    'sqm-scripts', 'luci-app-sqm'):
+        key = f'CONFIG_PACKAGE_{package}'
+        if actual.get(key, 'n') != 'n':
+            errors.append(f'{key}: removed feature was selected again')
+    if errors:
+        for error in errors:
+            print(f'::error::{error}', file=sys.stderr)
+        sys.exit(1)
+    print(f'Effective profile checks passed: {len(required)} required settings.')
+    for key in ('CONFIG_KERNEL_BPF_EVENTS', 'CONFIG_KERNEL_BPF_STREAM_PARSER',
+                'CONFIG_KERNEL_FTRACE', 'CONFIG_KERNEL_KPROBES',
+                'CONFIG_KERNEL_PERF_EVENTS', 'CONFIG_KERNEL_NETKIT',
+                'CONFIG_KERNEL_XDP_SOCKETS'):
+        print(f'{key}={actual.get(key, "n")}')
+    PYCONF

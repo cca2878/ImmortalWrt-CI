@@ -644,7 +644,8 @@ jobs:
           cp -f ./.config ./upload/config_"$WRT_VER"_"$WRT_CONF"_"$F_DATE".txt
 
           if [[ $WRT_TEST != 'true' ]]; then
-            find ./bin/targets/ -iregex ".*\(json\|manifest\|packages\)$" -exec rm -rf {} +
+            # Keep image metadata and package manifests alongside firmware.
+            find ./bin/targets/ -type d -name packages -prune -exec rm -rf {} +
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
             echo "Firmware files:"
             ls -la ./upload/
