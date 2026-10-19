@@ -1,0 +1,317 @@
+# WRT-CONTAINER / re_cs_02_ap
+# JDCloud RE-CS-02: AP + optional MAP-E; EROFS + F2FS; Argon; GCC 15 / O2.
+# Install as Configs/re_cs_02_ap.yml and select WRT_CONF=re_cs_02_ap.
+# branch is a checkout ref: pin the tested main commit for reproducibility.
+# No custom network/WiFi/US country/ISP defaults are embedded.
+repo: VIKINGYFY/immortalwrt
+branch: "f9b0ce7650fdcc7f4793256a3ae43c1132e2bc49"
+
+# Deduplicated diffconfig; make defconfig restores the complete configuration.
+config: |
+  CONFIG_TARGET_qualcommax=y
+  CONFIG_TARGET_qualcommax_ipq60xx=y
+  CONFIG_TARGET_qualcommax_ipq60xx_DEVICE_jdcloud_re-cs-02=y
+  CONFIG_DEVEL=y
+  CONFIG_TOOLCHAINOPTS=y
+  CONFIG_CCACHE=y
+  # CONFIG_GCC_USE_VERSION_14 is not set
+  CONFIG_GCC_USE_VERSION_15=y
+  CONFIG_INCLUDE_CONFIG=y
+  CONFIG_KERNEL_BUILD_DOMAIN="build-host"
+  CONFIG_KERNEL_BUILD_USER="build-user"
+  # CONFIG_KERNEL_DEBUG_INFO is not set
+  CONFIG_KERNEL_EROFS_FS=y
+  CONFIG_KERNEL_EROFS_FS_ZIP=y
+  CONFIG_KERNEL_EROFS_FS_ZIP_LZMA=y
+  # CONFIG_KERNEL_IPV6_MROUTE is not set
+  # CONFIG_KERNEL_IPV6_SEG6_LWTUNNEL is not set
+  # CONFIG_KERNEL_IP_MROUTE is not set
+  # CONFIG_KERNEL_MPTCP is not set
+  # CONFIG_KERNEL_NET_L3_MASTER_DEV is not set
+  CONFIG_LLDPD_WITH_CDP=y
+  CONFIG_LLDPD_WITH_CUSTOM=y
+  CONFIG_LLDPD_WITH_DOT1=y
+  CONFIG_LLDPD_WITH_DOT3=y
+  CONFIG_LLDPD_WITH_EDP=y
+  CONFIG_LLDPD_WITH_FDP=y
+  CONFIG_LLDPD_WITH_LLDPMED=y
+  CONFIG_LLDPD_WITH_PRIVSEP=y
+  CONFIG_LLDPD_WITH_SONMP=y
+  CONFIG_LUCI_LANG_zh_Hans=y
+  # CONFIG_NSS_DRV_GRE_ENABLE is not set
+  # CONFIG_NSS_DRV_IGS_ENABLE is not set
+  # CONFIG_NSS_DRV_L2TP_ENABLE is not set
+  # CONFIG_NSS_DRV_LAG_ENABLE is not set
+  # CONFIG_NSS_DRV_MAPT_ENABLE is not set
+  # CONFIG_NSS_DRV_MATCH_ENABLE is not set
+  # CONFIG_NSS_DRV_MIRROR_ENABLE is not set
+  # CONFIG_NSS_DRV_PPPOE_ENABLE is not set
+  # CONFIG_NSS_DRV_PPTP_ENABLE is not set
+  # CONFIG_NSS_DRV_SHAPER_ENABLE is not set
+  # CONFIG_NSS_DRV_TUN6RD_ENABLE is not set
+  # CONFIG_NSS_DRV_TUNIPIP6_ENABLE is not set
+  # CONFIG_NSS_DRV_VXLAN_ENABLE is not set
+  # CONFIG_PACKAGE_6rd is not set
+  # CONFIG_PACKAGE_automount is not set
+  # CONFIG_PACKAGE_dnsmasq-full is not set
+  # CONFIG_PACKAGE_e2fsprogs is not set
+  # CONFIG_PACKAGE_fullconenat-sonic is not set
+  CONFIG_PACKAGE_ip-bridge=y
+  CONFIG_PACKAGE_ip-full=y
+  CONFIG_PACKAGE_iperf3=y
+  CONFIG_PACKAGE_iptables-mod-conntrack-extra=y
+  CONFIG_PACKAGE_iptables-nft=y
+  CONFIG_PACKAGE_iwinfo=y
+  # CONFIG_PACKAGE_kmod-crypto-crc32c is not set
+  # CONFIG_PACKAGE_kmod-crypto-sha1 is not set
+  # CONFIG_PACKAGE_kmod-fs-exfat is not set
+  # CONFIG_PACKAGE_kmod-fs-ext4 is not set
+  # CONFIG_PACKAGE_kmod-fs-ntfs3 is not set
+  # CONFIG_PACKAGE_kmod-fs-vfat is not set
+  # CONFIG_PACKAGE_kmod-gre is not set
+  # CONFIG_PACKAGE_kmod-gre6 is not set
+  # CONFIG_PACKAGE_kmod-ifb is not set
+  CONFIG_PACKAGE_kmod-ipt-conntrack=y
+  CONFIG_PACKAGE_kmod-ipt-conntrack-extra=y
+  CONFIG_PACKAGE_kmod-ipt-core=y
+  CONFIG_PACKAGE_kmod-iptables=y
+  # CONFIG_PACKAGE_kmod-l2tp is not set
+  # CONFIG_PACKAGE_kmod-lib-crc-ccitt is not set
+  # CONFIG_PACKAGE_kmod-lib-crc-itu-t is not set
+  # CONFIG_PACKAGE_kmod-lib-crc16 is not set
+  # CONFIG_PACKAGE_kmod-macvlan is not set
+  CONFIG_PACKAGE_kmod-nf-conncount=y
+  # CONFIG_PACKAGE_kmod-nf-conntrack-netlink is not set
+  CONFIG_PACKAGE_kmod-nf-ipt=y
+  CONFIG_PACKAGE_kmod-nft-compat=y
+  # CONFIG_PACKAGE_kmod-nls-cp437 is not set
+  # CONFIG_PACKAGE_kmod-nls-iso8859-1 is not set
+  # CONFIG_PACKAGE_kmod-nls-utf8 is not set
+  # CONFIG_PACKAGE_kmod-phy-aquantia is not set
+  # CONFIG_PACKAGE_kmod-ppp is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-eogremgr is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-gre is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-igs is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-l2tpv2 is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-lag-mgr is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-map-t is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-match is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-mirror is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-netlink is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-pppoe is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-qdisc is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-tun6rd is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-tunipip6 is not set
+  # CONFIG_PACKAGE_kmod-qca-nss-drv-vxlanmgr is not set
+  # CONFIG_PACKAGE_kmod-sched-core is not set
+  # CONFIG_PACKAGE_kmod-scsi-core is not set
+  # CONFIG_PACKAGE_kmod-sit is not set
+  # CONFIG_PACKAGE_kmod-usb-core is not set
+  # CONFIG_PACKAGE_kmod-usb-dwc3 is not set
+  # CONFIG_PACKAGE_kmod-usb-dwc3-qcom is not set
+  # CONFIG_PACKAGE_kmod-usb-serial is not set
+  # CONFIG_PACKAGE_kmod-usb-serial-qualcomm is not set
+  # CONFIG_PACKAGE_kmod-usb-storage is not set
+  # CONFIG_PACKAGE_kmod-usb-storage-extras is not set
+  # CONFIG_PACKAGE_kmod-usb-storage-uas is not set
+  # CONFIG_PACKAGE_kmod-usb3 is not set
+  # CONFIG_PACKAGE_kmod-vxlan is not set
+  CONFIG_PACKAGE_libatomic=y
+  # CONFIG_PACKAGE_libblkid is not set
+  CONFIG_PACKAGE_libbpf=y
+  CONFIG_PACKAGE_libcap=y
+  # CONFIG_PACKAGE_libcomerr is not set
+  # CONFIG_PACKAGE_libe2p is not set
+  CONFIG_PACKAGE_libelf=y
+  CONFIG_PACKAGE_libevent2=y
+  # CONFIG_PACKAGE_libext2fs is not set
+  # CONFIG_PACKAGE_libgmp is not set
+  CONFIG_PACKAGE_libiperf3=y
+  CONFIG_PACKAGE_libiptext=y
+  CONFIG_PACKAGE_libiptext-nft=y
+  CONFIG_PACKAGE_libiptext6=y
+  # CONFIG_PACKAGE_libnetfilter-conntrack is not set
+  # CONFIG_PACKAGE_libnettle is not set
+  # CONFIG_PACKAGE_libnfnetlink is not set
+  CONFIG_PACKAGE_libpcap=y
+  # CONFIG_PACKAGE_libss is not set
+  CONFIG_PACKAGE_libxtables=y
+  CONFIG_PACKAGE_lldpd=y
+  # CONFIG_PACKAGE_luci is not set
+  # CONFIG_PACKAGE_luci-app-fullconenat-sonic is not set
+  CONFIG_PACKAGE_luci-app-lldpd=y
+  # CONFIG_PACKAGE_luci-app-package-manager is not set
+  CONFIG_PACKAGE_luci-app-usteer=y
+  CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-lldpd-zh-cn=y
+  CONFIG_PACKAGE_luci-i18n-usteer-zh-cn=y
+  # CONFIG_PACKAGE_luci-light is not set
+  # CONFIG_PACKAGE_luci-proto-ppp is not set
+  CONFIG_PACKAGE_luci-theme-argon=y
+  # CONFIG_PACKAGE_luci-theme-bootstrap is not set
+  CONFIG_PACKAGE_map=y
+  # CONFIG_PACKAGE_ntfs3-mount is not set
+  # CONFIG_PACKAGE_odhcpd-ipv6only is not set
+  CONFIG_PACKAGE_openssl-util=y
+  # CONFIG_PACKAGE_ppp is not set
+  # CONFIG_PACKAGE_shellsync is not set
+  CONFIG_PACKAGE_tcpdump-mini=y
+  CONFIG_PACKAGE_uhttpd-mod-ucode=y
+  CONFIG_PACKAGE_usteer=y
+  CONFIG_PACKAGE_xtables-nft=y
+  CONFIG_TARGET_EROFS_PCLUSTER_SIZE=256
+  CONFIG_TARGET_OPTIMIZATION="-O2 -pipe -mcpu=cortex-a53"
+  CONFIG_TARGET_OPTIONS=y
+  CONFIG_TARGET_ROOTFS_EROFS=y
+  # CONFIG_TARGET_ROOTFS_SQUASHFS is not set
+  CONFIG_PACKAGE_block-mount=y
+  CONFIG_PACKAGE_libiwinfo=y
+  CONFIG_PACKAGE_libiwinfo-data=y
+  CONFIG_PACKAGE_luci-app-firewall=y
+  CONFIG_PACKAGE_luci-lib-uqr=y
+  CONFIG_PACKAGE_luci-mod-admin-full=y
+  CONFIG_PACKAGE_luci-mod-network=y
+  CONFIG_PACKAGE_luci-mod-status=y
+  CONFIG_PACKAGE_luci-mod-system=y
+  CONFIG_PACKAGE_luci-proto-ipv6=y
+  CONFIG_PACKAGE_rpcd-mod-iwinfo=y
+  CONFIG_PACKAGE_rpcd-mod-rrdns=y
+  CONFIG_PACKAGE_uhttpd=y
+  # CONFIG_PACKAGE_uhttpd-mod-lua is not set
+  CONFIG_PACKAGE_uhttpd-mod-ubus=y
+
+# Complete pinned feeds are written by before_feeds_update.
+feeds: ""
+hooks:
+  after_clone: ""
+  before_feeds_update: |
+    # Replace defaults rather than append duplicate feed names.
+    cat > feeds.conf.default <<'AP_FEEDS'
+    # Feed commits used for the RE-CS-02 AP EROFS configuration.
+    src-git packages https://github.com/immortalwrt/packages.git^8d50d4ea3f11eef6f8fcc889cd35ba6fcb530481
+    src-git luci https://github.com/immortalwrt/luci.git^17f97c0bec190e18d4884ab8204f63c64981edd7
+    src-git routing https://github.com/openwrt/routing.git^4b9891b9136259f93294a424507ed24c5e8c1cbd
+    src-git telephony https://github.com/openwrt/telephony.git^5d68d53c160a325ea9d03fce393e051573bcc736
+    src-git video https://github.com/openwrt/video.git^6917907d4d6c670cf85be525d23216595655061d
+    AP_FEEDS
+    cp feeds.conf.default feeds.conf
+  after_feeds_update: ""
+  after_feeds_install: |
+    # The workflow runs install -a first. Replace those generated links with
+    # the tested definition set before Kconfig is generated. This avoids
+    # unrelated Qt5/squeezelite-custom dependency cycles in these feeds.
+    ./scripts/feeds uninstall -a
+    ./scripts/feeds install \
+      abseil-cpp attr bluez cgi-io cryptsetup csstidy \
+      curl cyrus-sasl db dbus expat gdbm \
+      glib2 gnutls hwdata icu iperf3 kmod \
+      krb5 libaio libedit libev libffi libgpiod \
+      libical libidn2 libpam libsodium libssh libssh2 \
+      libtasn1 libtirpc libusb-compat linenoise lm-sensors luasrcdiet \
+      luci luci-app-firewall luci-app-lldpd luci-app-package-manager luci-app-usteer luci-base \
+      luci-lib-uqr luci-light luci-mod-admin-full luci-mod-network luci-mod-status luci-mod-system \
+      luci-proto-ipv6 luci-proto-ppp luci-theme-argon luci-theme-bootstrap lucihttp lvm2 \
+      net-snmp nghttp2 nghttp3 ngtcp2 openldap p11-kit \
+      pciutils perl protobuf protobuf-c python-build python-flit-core \
+      python-installer python-packaging python-pyproject-hooks python-setuptools python-wheel python3 \
+      rpcd-mod-luci rpcd-mod-rrdns sqlite3 ucode-mod-html unbound usteer \
+      wget xz zstd
+  before_compile: |
+    python3 - <<'PYCONF'
+    from pathlib import Path
+    import re
+    import sys
+
+    # Validate effective settings after the workflow runs make defconfig.
+    required = {
+        'CONFIG_TARGET_qualcommax': 'y',
+        'CONFIG_TARGET_qualcommax_ipq60xx': 'y',
+        'CONFIG_TARGET_qualcommax_ipq60xx_DEVICE_jdcloud_re-cs-02': 'y',
+        'CONFIG_TOOLCHAINOPTS': 'y',
+        'CONFIG_GCC_USE_VERSION_15': 'y',
+        'CONFIG_GCC_VERSION': '"15.3.0"',
+        'CONFIG_BINUTILS_USE_VERSION_2_46': 'y',
+        'CONFIG_BINUTILS_VERSION': '"2.46.1"',
+        'CONFIG_CCACHE': 'y',
+        'CONFIG_INCLUDE_CONFIG': 'y',
+        'CONFIG_TARGET_OPTIMIZATION': '"-O2 -pipe -mcpu=cortex-a53"',
+        'CONFIG_KERNEL_CC_OPTIMIZE_FOR_PERFORMANCE': 'y',
+        'CONFIG_TARGET_ROOTFS_EROFS': 'y',
+        'CONFIG_TARGET_ROOTFS_SQUASHFS': 'n',
+        'CONFIG_TARGET_ROOTFS_EXT4FS': 'n',
+        'CONFIG_TARGET_EROFS_PCLUSTER_SIZE': '256',
+        'CONFIG_KERNEL_EROFS_FS': 'y',
+        'CONFIG_TARGET_ROOTFS_INITRAMFS': 'y',
+        'CONFIG_TARGET_INITRAMFS_COMPRESSION_ZSTD': 'y',
+        'CONFIG_TARGET_ROOTFS_PERSIST_VAR': 'n',
+        'CONFIG_ATH11K_NSS_SUPPORT': 'y',
+        'CONFIG_ATH11K_THERMAL': 'y',
+        'CONFIG_WPA_MBO_SUPPORT': 'y',
+        'CONFIG_KERNEL_SKB_RECYCLER': 'y',
+        'CONFIG_KERNEL_SKB_RECYCLER_MULTI_CPU': 'y',
+        'CONFIG_KERNEL_SKB_RECYCLER_PREALLOC': 'n',
+        'CONFIG_LUCI_LANG_zh_Hans': 'y',
+        'CONFIG_PKG_ASLR_PIE_REGULAR': 'y',
+        'CONFIG_PKG_CC_STACKPROTECTOR_REGULAR': 'y',
+        'CONFIG_KERNEL_CC_STACKPROTECTOR_REGULAR': 'y',
+        'CONFIG_PKG_FORTIFY_SOURCE_1': 'y',
+        'CONFIG_PKG_RELRO_FULL': 'y',
+        'CONFIG_PKG_DT_RELR': 'y',
+        'CONFIG_USE_LTO': 'n',
+        'CONFIG_USE_GC_SECTIONS': 'n',
+        'CONFIG_USE_MOLD': 'n',
+        'CONFIG_GCC_USE_GRAPHITE': 'n',
+    }
+    for package in (
+        'fstools', 'block-mount', 'kmod-fs-f2fs', 'f2fs-tools', 'losetup',
+        'uboot-envtools', 'ath11k-firmware-ipq6018-ddwrt',
+        'ath11k-firmware-qcn9074-ddwrt', 'ipq-wifi-jdcloud_re-cs-02',
+        'kmod-ath11k-ahb', 'kmod-ath11k-pci', 'wpad-openssl',
+        'kmod-qca-nss-drv', 'kmod-qca-nss-dp', 'kmod-qca-nss-ecm',
+        'kmod-qca-ssdk', 'kmod-qca-nss-drv-bridge-mgr',
+        'kmod-qca-nss-drv-vlan-mgr', 'kmod-qca-nss-drv-wifi-meshmgr',
+        'luci-mod-admin-full', 'luci-theme-argon', 'luci-i18n-base-zh-cn',
+        'uhttpd', 'uhttpd-mod-ubus', 'libustream-openssl', 'openssl-util',
+        'dropbear', 'luci-app-athena-led', 'ethtool', 'ip-bridge', 'ip-full',
+        'map', 'odhcp6c', 'luci-proto-ipv6', 'kmod-ip6-tunnel',
+        'kmod-iptunnel6', 'kmod-nat46', 'firewall4', 'nftables-json',
+        'iptables-nft', 'iptables-mod-conntrack-extra', 'luci-app-firewall',
+        'luci-i18n-firewall-zh-cn', 'iperf3', 'tcpdump-mini', 'usteer',
+        'luci-app-usteer', 'luci-i18n-usteer-zh-cn', 'lldpd',
+        'luci-app-lldpd', 'luci-i18n-lldpd-zh-cn',
+    ):
+        required['CONFIG_PACKAGE_' + package] = 'y'
+    for package in (
+        'dnsmasq', 'dnsmasq-full', 'odhcpd', 'odhcpd-ipv6only', 'ppp',
+        'ppp-mod-pppoe', 'luci', 'luci-light', 'luci-theme-bootstrap',
+        'luci-app-package-manager', 'default-settings', 'default-settings-chn',
+        'docker', 'dockerd', 'containerd', 'mosdns', 'nikki',
+        'dawn', 'irqbalance', 'sqm-scripts', 'miniupnpd-nftables',
+        'fullconenat-sonic', 'luci-app-fullconenat-sonic',
+        'luci-i18n-fullconenat-sonic-zh-cn',
+    ):
+        required['CONFIG_PACKAGE_' + package] = 'n'
+
+    actual = {}
+    for line in Path('.config').read_text().splitlines():
+        if line.startswith('CONFIG_') and '=' in line:
+            key, value = line.split('=', 1)
+            actual[key] = value
+    errors = []
+    for key, expected in required.items():
+        value = actual.get(key, 'n')
+        if value != expected:
+            errors.append(f'{key}: expected {expected}, got {value}')
+    for key, value in actual.items():
+        if key.startswith('CONFIG_PACKAGE_') and value == 'm':
+            errors.append(f'{key}: expected packages built into the image, got m')
+    if errors:
+        for error in errors:
+            print(f'::error::{error}', file=sys.stderr)
+        sys.exit(1)
+    known = set(re.findall(r'^Package: (\S+)', Path('tmp/.packageinfo').read_text(), re.M))
+    selected = [name for name in known if actual.get('CONFIG_PACKAGE_' + name) == 'y']
+    print(f'RE-CS-02 AP profile checks passed: {len(required)} settings, {len(selected)} packages.')
+    print('Network, US country, SSID, roaming and MAP-E provider settings must be configured after flashing.')
+    PYCONF
