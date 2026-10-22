@@ -355,11 +355,14 @@ config: |
   CONFIG_PACKAGE_uhttpd-mod-ubus=y
 feeds: ""
 hooks:
-  after_clone: ""
+  after_clone: |
+    python3 "$PATH_WORKDIR/$PATH_CI/Configs/security_updates.py" source "$WRT_CONF"
   before_feeds_update: ""
-  after_feeds_update: ""
+  after_feeds_update: |
+    python3 "$PATH_WORKDIR/$PATH_CI/Configs/security_updates.py" feeds "$WRT_CONF"
   after_feeds_install: ""
   before_compile: |
+    python3 "$PATH_WORKDIR/$PATH_CI/Configs/security_updates.py" verify "$WRT_CONF" | tee "$PATH_DIAGNOSTICS/security-updates.json"
     python3 - <<'PYCONF'
     from pathlib import Path
     import sys

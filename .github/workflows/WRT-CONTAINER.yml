@@ -345,7 +345,19 @@ jobs:
             CONFIG_HASH="00000000"
           fi
 
-          CACHE_KEY="${WRT_VER}-${WRT_CONF}-${WRT_HASH}-${CONFIG_HASH}"
+          CACHE_SCOPE="${WRT_VER}-${WRT_CONF}"
+          # Never restore pre-fix staging/toolchain outputs for these profiles.
+          # Include hook inputs too: hashing only .config misses source backports.
+          case "$WRT_CONF" in
+            x86_jp_skylake|re_cs_02_ap)
+              SECURITY_HASH=$(cat "$CONFIG_YML" \
+                "$PATH_WORKDIR/$PATH_CI/Configs/security_updates.py" \
+                "$PATH_WORKDIR/$PATH_CI/Configs/security/golang1.27/"* | sha256sum | cut -c1-16)
+              CACHE_SCOPE="${CACHE_SCOPE}-security-${SECURITY_HASH}"
+              ;;
+          esac
+          echo "CACHE_SCOPE=$CACHE_SCOPE" >> $GITHUB_ENV
+          CACHE_KEY="${CACHE_SCOPE}-${WRT_HASH}-${CONFIG_HASH}"
           echo "CACHE_KEY=$CACHE_KEY" >> $GITHUB_ENV
 
           echo "Cache key:   $CACHE_KEY"
@@ -361,8 +373,8 @@ jobs:
         with:
           key: ${{env.CACHE_KEY}}
           restore-keys: |
-            ${{env.WRT_VER}}-${{env.WRT_CONF}}-${{env.WRT_HASH}}-
-            ${{env.WRT_VER}}-${{env.WRT_CONF}}-
+            ${{env.CACHE_SCOPE}}-${{env.WRT_HASH}}-
+            ${{env.CACHE_SCOPE}}-
           path: |
             ${{env.PATH_WORKDIR}}/${{env.PATH_SRC}}/.ccache
             ${{env.PATH_WORKDIR}}/${{env.PATH_SRC}}/staging_dir/host*

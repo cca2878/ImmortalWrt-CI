@@ -1,0 +1,24 @@
+name: Verify security backports
+on:
+  push:
+    branches: [main]
+    paths:
+      - Configs/security_updates.py
+      - Configs/security/**
+      - Configs/x86_jp_skylake.yml
+      - Configs/re_cs_02_ap.yml
+      - Configs/wrt_cfg.py
+      - tests/**
+      - .github/workflows/WRT-CONTAINER.yml
+      - .github/workflows/security-updates.yml
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - run: sudo apt-get update && sudo apt-get install -y python3-yaml
+      - run: python3 -m unittest discover -s tests -v

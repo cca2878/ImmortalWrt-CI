@@ -8,6 +8,7 @@ branch: "f9b0ce7650fdcc7f4793256a3ae43c1132e2bc49"
 
 # Deduplicated diffconfig; make defconfig restores the complete configuration.
 config: |
+  CONFIG_PACKAGE_ca-bundle=y
   CONFIG_TARGET_qualcommax=y
   CONFIG_TARGET_qualcommax_ipq60xx=y
   CONFIG_TARGET_qualcommax_ipq60xx_DEVICE_jdcloud_re-cs-02=y
@@ -184,7 +185,8 @@ config: |
 # Complete pinned feeds are written by before_feeds_update.
 feeds: ""
 hooks:
-  after_clone: ""
+  after_clone: |
+    python3 "$PATH_WORKDIR/$PATH_CI/Configs/security_updates.py" source "$WRT_CONF"
   before_feeds_update: |
     # Replace defaults rather than append duplicate feed names.
     cat > feeds.conf.default <<'AP_FEEDS'
@@ -196,7 +198,8 @@ hooks:
     src-git video https://github.com/openwrt/video.git^6917907d4d6c670cf85be525d23216595655061d
     AP_FEEDS
     cp feeds.conf.default feeds.conf
-  after_feeds_update: ""
+  after_feeds_update: |
+    python3 "$PATH_WORKDIR/$PATH_CI/Configs/security_updates.py" feeds "$WRT_CONF"
   after_feeds_install: |
     # The workflow runs install -a first. Replace those generated links with
     # the tested definition set before Kconfig is generated. This avoids
@@ -218,6 +221,7 @@ hooks:
       rpcd-mod-luci rpcd-mod-rrdns sqlite3 ucode-mod-html unbound usteer \
       wget xz zstd
   before_compile: |
+    python3 "$PATH_WORKDIR/$PATH_CI/Configs/security_updates.py" verify "$WRT_CONF" | tee "$PATH_DIAGNOSTICS/security-updates.json"
     python3 - <<'PYCONF'
     from pathlib import Path
     import re
@@ -264,7 +268,7 @@ hooks:
         'CONFIG_GCC_USE_GRAPHITE': 'n',
     }
     for package in (
-        'fstools', 'block-mount', 'kmod-fs-f2fs', 'f2fs-tools', 'losetup',
+        'ca-bundle', 'fstools', 'block-mount', 'kmod-fs-f2fs', 'f2fs-tools', 'losetup',
         'uboot-envtools', 'ath11k-firmware-ipq6018-ddwrt',
         'ath11k-firmware-qcn9074-ddwrt', 'ipq-wifi-jdcloud_re-cs-02',
         'kmod-ath11k-ahb', 'kmod-ath11k-pci', 'wpad-openssl',
