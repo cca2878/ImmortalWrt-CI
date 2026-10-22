@@ -16,7 +16,7 @@ CA_SOURCE = "$(PKG_NAME)_20260816+nmu1.tar.xz"
 CA_HASH = "914416a1e44a25733aff51092fe4e27fdec1c9f6e8d1db0b8364922486153134"
 GO = {
     "1.26": ("9", "10", "fd63e883ba2f2bfca93c1646b31ebef63e2b1e4d2b317c9789d976a68d81f36f"),
-    "1.27": ("2", "3", "6e7749035cf360f06b2575d162ea79df9fda8ef671889e5c375f8e50777f26bb"),
+    "1.27": (("1", "2"), "3", "6e7749035cf360f06b2575d162ea79df9fda8ef671889e5c375f8e50777f26bb"),
 }
 CLOUD_VERSION = "2026.10.2"
 CLOUD_HASH = "8dde1e9e4b0ad5ae09abd7b5790dabc9195ba48a5c7f0af7e54e787eef54a3cb"
@@ -40,7 +40,8 @@ def replace(text, name, new):
 def update(path, version_key, old, new, checksum):
     text = path.read_text()
     current = value(text, version_key)
-    if current not in (old, new):
+    old_versions = (old,) if isinstance(old, str) else old
+    if current not in (*old_versions, new):
         raise ValueError(f"{path}: unexpected {version_key}={current}; review the backport")
     if current == new:
         if value(text, "PKG_HASH") != checksum:
@@ -61,8 +62,8 @@ def apply_source():
 
 
 def apply_feeds(profile):
-    # 25.12 has Go 1.26 only. The 1.27 recipe uses the same shared compiler,
-    # bootstrap and package helpers, verified identical in the two feeds.
+    # Reuse 25.12's host-only Go 1.27 recipe when present. Older feed snapshots
+    # need the bundled recipe, which uses the same shared compiler helpers.
     if profile == "x86_jp_skylake" and not (GOLANG / "golang1.27/Makefile").exists():
         target = GOLANG / "golang1.27/Makefile"
         shutil.copytree(Path(__file__).parent / "security/golang1.27", target.parent)
