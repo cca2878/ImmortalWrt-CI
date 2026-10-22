@@ -11,7 +11,8 @@ import re
 import shutil
 
 PROFILES = ("x86_jp_skylake", "re_cs_02_ap")
-CA_VERSION = "20260816+nmu1"
+CA_VERSION = "20261020"  # APK versions cannot contain Debian's +nmu suffix.
+CA_SOURCE = "$(PKG_NAME)_20260816+nmu1.tar.xz"
 CA_HASH = "914416a1e44a25733aff51092fe4e27fdec1c9f6e8d1db0b8364922486153134"
 GO = {
     "1.26": ("9", "10", "fd63e883ba2f2bfca93c1646b31ebef63e2b1e4d2b317c9789d976a68d81f36f"),
@@ -52,7 +53,11 @@ def update(path, version_key, old, new, checksum):
 
 
 def apply_source():
+    source = value(CA.read_text(), "PKG_SOURCE")
+    if source not in ("$(PKG_NAME)_$(PKG_VERSION).tar.xz", CA_SOURCE):
+        raise ValueError("Unexpected CA source archive")
     update(CA, "PKG_VERSION", "20260816", CA_VERSION, CA_HASH)
+    CA.write_text(replace(CA.read_text(), "PKG_SOURCE", CA_SOURCE))
 
 
 def apply_feeds(profile):
@@ -76,7 +81,16 @@ def apply_feeds(profile):
         text = CLOUD.read_text()
         if value(text, "PKG_BUILD_DEPENDS") not in ("golang/host", "golang1.27/host"):
             raise ValueError("Unexpected cloudflared build dependencies")
-        CLOUD.write_text(replace(text, "PKG_BUILD_DEPENDS", "golang1.27/host"))
+        text = replace(text, "PKG_BUILD_DEPENDS", "golang1.27/host")
+        # The release archive's vendor metadata is stale. Use the checked-in
+        # go.mod/go.sum without allowing dependency resolution to rewrite them.
+        flag = "GO_MOD_ARGS+=-mod=readonly"
+        if flag not in text.splitlines():
+            include = "include ../../lang/golang/golang-package.mk\n"
+            if text.count(include) != 1:
+                raise ValueError("Unexpected cloudflared Go helper include")
+            text = text.replace(include, include + "\n" + flag + "\n")
+        CLOUD.write_text(text)
 
 
 def verify(profile):
@@ -87,7 +101,7 @@ def verify(profile):
         if actual != expected:
             raise ValueError(f"{path}: security backport missing: {actual}")
         result["packages"][str(path)] = actual
-    check(CA, {"PKG_VERSION": CA_VERSION, "PKG_HASH": CA_HASH})
+    check(CA, {"PKG_VERSION": CA_VERSION, "PKG_SOURCE": CA_SOURCE, "PKG_HASH": CA_HASH})
     for minor, (_, patch, checksum) in GO.items():
         path = GOLANG / f"golang{minor}/Makefile"
         if path.exists():
@@ -99,6 +113,8 @@ def verify(profile):
         if not (GOLANG / "golang1.27/Makefile").exists():
             raise ValueError("cloudflared requires Go 1.27")
         check(CLOUD, {"PKG_VERSION": CLOUD_VERSION, "PKG_HASH": CLOUD_HASH, "PKG_BUILD_DEPENDS": "golang1.27/host"})
+        if "GO_MOD_ARGS+=-mod=readonly" not in CLOUD.read_text().splitlines():
+            raise ValueError("cloudflared must use its authoritative go.mod/go.sum")
     return result
 
 

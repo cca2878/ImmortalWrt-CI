@@ -39,6 +39,7 @@ class BackportTests(unittest.TestCase):
             security.apply_feeds("x86_jp_skylake")
             result = security.verify("x86_jp_skylake")
             self.assertEqual(len(result["packages"]), 4)
+            self.assertIn("GO_MOD_ARGS+=-mod=readonly", security.CLOUD.read_text().splitlines())
         before = {p: p.read_bytes() for p in Path(".").rglob("Makefile")}
         security.apply_source()
         security.apply_feeds("x86_jp_skylake")
@@ -70,6 +71,13 @@ class BackportTests(unittest.TestCase):
         security.CA.write_text(security.CA.read_text().replace(security.CA_HASH, "0" * 64))
         with self.assertRaises(ValueError):
             security.verify("re_cs_02_ap")
+
+    def test_ca_source_version_is_separate_from_apk_package_version(self):
+        security.apply_source()
+        text = security.CA.read_text()
+        self.assertEqual(security.value(text, "PKG_SOURCE"), "$(PKG_NAME)_20260816+nmu1.tar.xz")
+        version = security.value(text, "PKG_VERSION") + "-r" + security.value(text, "PKG_RELEASE")
+        self.assertRegex(version, r"^\d+(?:\.\d+)*-r\d+$")
 
     def test_profile_hooks_use_supported_workflow_order(self):
         workflow = yaml.safe_load((ROOT / ".github/workflows/WRT-CONTAINER.yml").read_text())
