@@ -346,14 +346,17 @@ jobs:
           fi
 
           CACHE_SCOPE="${WRT_VER}-${WRT_CONF}"
-          # Never restore pre-fix staging/toolchain outputs for these profiles.
-          # Include hook inputs too: hashing only .config misses source backports.
+          # Version the namespace so removing old overlays cannot restore their
+          # staging outputs. Profile YAML includes source/feed pins and hooks.
           case "$WRT_CONF" in
             x86_jp_skylake|re_cs_02_ap)
-              SECURITY_HASH=$(cat "$CONFIG_YML" \
-                "$PATH_WORKDIR/$PATH_CI/Configs/security_updates.py" \
-                "$PATH_WORKDIR/$PATH_CI/Configs/security/golang1.27/"* | sha256sum | cut -c1-16)
-              CACHE_SCOPE="${CACHE_SCOPE}-security-${SECURITY_HASH}"
+              PROFILE_HASH=$({
+                cat "$CONFIG_YML"
+                if [ "$WRT_CONF" = "re_cs_02_ap" ]; then
+                  cat "$PATH_WORKDIR/$PATH_CI/Configs/security_updates.py"
+                fi
+              } | sha256sum | cut -c1-16)
+              CACHE_SCOPE="${CACHE_SCOPE}-profile-v2-${PROFILE_HASH}"
               ;;
           esac
           echo "CACHE_SCOPE=$CACHE_SCOPE" >> $GITHUB_ENV

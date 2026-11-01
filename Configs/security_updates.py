@@ -8,21 +8,32 @@ import argparse
 import json
 from pathlib import Path
 import re
-import shutil
 
-PROFILES = ("x86_jp_skylake", "re_cs_02_ap")
+PROFILES = ("re_cs_02_ap",)
 CA_VERSION = "20261020"  # APK versions cannot contain Debian's +nmu suffix.
 CA_SOURCE = "$(PKG_NAME)_20260816+nmu1.tar.xz"
 CA_HASH = "914416a1e44a25733aff51092fe4e27fdec1c9f6e8d1db0b8364922486153134"
 GO = {
-    "1.26": ("9", "10", "fd63e883ba2f2bfca93c1646b31ebef63e2b1e4d2b317c9789d976a68d81f36f"),
-    "1.27": (("1", "2"), "3", "6e7749035cf360f06b2575d162ea79df9fda8ef671889e5c375f8e50777f26bb"),
+    "1.27": ("2", "3", "6e7749035cf360f06b2575d162ea79df9fda8ef671889e5c375f8e50777f26bb"),
 }
-CLOUD_VERSION = "2026.10.2"
-CLOUD_HASH = "8dde1e9e4b0ad5ae09abd7b5790dabc9195ba48a5c7f0af7e54e787eef54a3cb"
 CA = Path("package/system/ca-certificates/Makefile")
 GOLANG = Path("feeds/packages/lang/golang")
-CLOUD = Path("feeds/packages/net/cloudflared/Makefile")
+# Source metadata from immortalwrt/immortalwrt master. Keep ubus and rpcd
+# together: rpcd's non-root session checks require libubus's pre_invoke API.
+SOURCE_UPDATES = {
+    Path("package/network/services/uhttpd/Makefile"): (
+        "373145f72c884c36a2b16f7f47e74ffae06bd754",
+        "ca796d7dec5697a2d1a7a42be79677f239b64282", "2026-10-19",
+        "6a2fbcc0dbd3f6c9d076037f23b8544356487aea6b00d2a82a3591b09ba4a8e4"),
+    Path("package/system/ubus/Makefile"): (
+        "414c60a2e29e72c2c4f573bc50ad54aef076d169",
+        "db20eff5535fe3126c05dc0edc029caf0e82fe10", "2026-10-28",
+        "6c877039f5e57429c964848332636439ed1b34b2e9445e51c5ec8e290dab8d0a"),
+    Path("package/system/rpcd/Makefile"): (
+        "d99f703e4035d03fbcfbada3cb697db346c2b984",
+        "469d7852316ef692805396d8af744ec43604b842", "2026-10-28",
+        "dec618e00ee5550b360498997fc5c4725526243e22e866aab3d584e919e0603d"),
+}
 
 
 def value(text, name):
@@ -37,18 +48,17 @@ def replace(text, name, new):
     return re.sub(r"^" + re.escape(name) + r":=.*$", lambda _: f"{name}:={new}", text, flags=re.M)
 
 
-def update(path, version_key, old, new, checksum):
+def update(path, version_key, old, new, checksum, hash_key="PKG_HASH"):
     text = path.read_text()
     current = value(text, version_key)
-    old_versions = (old,) if isinstance(old, str) else old
-    if current not in (*old_versions, new):
+    if current not in (old, new):
         raise ValueError(f"{path}: unexpected {version_key}={current}; review the backport")
     if current == new:
-        if value(text, "PKG_HASH") != checksum:
+        if value(text, hash_key) != checksum:
             raise ValueError(f"{path}: patched version has an unexpected source hash")
         return
     text = replace(text, version_key, new)
-    text = replace(text, "PKG_HASH", checksum)
+    text = replace(text, hash_key, checksum)
     text = replace(text, "PKG_RELEASE", "1")
     path.write_text(text)
 
@@ -59,14 +69,12 @@ def apply_source():
         raise ValueError("Unexpected CA source archive")
     update(CA, "PKG_VERSION", "20260816", CA_VERSION, CA_HASH)
     CA.write_text(replace(CA.read_text(), "PKG_SOURCE", CA_SOURCE))
+    for path, (old, new, date, checksum) in SOURCE_UPDATES.items():
+        update(path, "PKG_SOURCE_VERSION", old, new, checksum, "PKG_MIRROR_HASH")
+        path.write_text(replace(path.read_text(), "PKG_SOURCE_DATE", date))
 
 
 def apply_feeds(profile):
-    # Reuse 25.12's host-only Go 1.27 recipe when present. Older feed snapshots
-    # need the bundled recipe, which uses the same shared compiler helpers.
-    if profile == "x86_jp_skylake" and not (GOLANG / "golang1.27/Makefile").exists():
-        target = GOLANG / "golang1.27/Makefile"
-        shutil.copytree(Path(__file__).parent / "security/golang1.27", target.parent)
     found = False
     for minor, (old, new, checksum) in GO.items():
         path = GOLANG / f"golang{minor}/Makefile"
@@ -77,21 +85,6 @@ def apply_feeds(profile):
             found = True
     if not found:
         raise ValueError("No supported Go compiler in packages feed")
-    if profile == "x86_jp_skylake":
-        update(CLOUD, "PKG_VERSION", "2026.8.3", CLOUD_VERSION, CLOUD_HASH)
-        text = CLOUD.read_text()
-        if value(text, "PKG_BUILD_DEPENDS") not in ("golang/host", "golang1.27/host"):
-            raise ValueError("Unexpected cloudflared build dependencies")
-        text = replace(text, "PKG_BUILD_DEPENDS", "golang1.27/host")
-        # The release archive's vendor metadata is stale. Use the checked-in
-        # go.mod/go.sum without allowing dependency resolution to rewrite them.
-        flag = "GO_MOD_ARGS+=-mod=readonly"
-        if flag not in text.splitlines():
-            include = "include ../../lang/golang/golang-package.mk\n"
-            if text.count(include) != 1:
-                raise ValueError("Unexpected cloudflared Go helper include")
-            text = text.replace(include, include + "\n" + flag + "\n")
-        CLOUD.write_text(text)
 
 
 def verify(profile):
@@ -103,19 +96,14 @@ def verify(profile):
             raise ValueError(f"{path}: security backport missing: {actual}")
         result["packages"][str(path)] = actual
     check(CA, {"PKG_VERSION": CA_VERSION, "PKG_SOURCE": CA_SOURCE, "PKG_HASH": CA_HASH})
+    for path, (_, new, date, checksum) in SOURCE_UPDATES.items():
+        check(path, {"PKG_SOURCE_VERSION": new, "PKG_SOURCE_DATE": date, "PKG_MIRROR_HASH": checksum})
     for minor, (_, patch, checksum) in GO.items():
         path = GOLANG / f"golang{minor}/Makefile"
         if path.exists():
             check(path, {"GO_VERSION_MAJOR_MINOR": minor, "GO_VERSION_PATCH": patch, "PKG_HASH": checksum})
-    required_minor = "1.26" if profile == "x86_jp_skylake" else "1.27"
-    if not (GOLANG / f"golang{required_minor}/Makefile").exists():
+    if not (GOLANG / "golang1.27/Makefile").exists():
         raise ValueError("Profile's Go compiler is missing")
-    if profile == "x86_jp_skylake":
-        if not (GOLANG / "golang1.27/Makefile").exists():
-            raise ValueError("cloudflared requires Go 1.27")
-        check(CLOUD, {"PKG_VERSION": CLOUD_VERSION, "PKG_HASH": CLOUD_HASH, "PKG_BUILD_DEPENDS": "golang1.27/host"})
-        if "GO_MOD_ARGS+=-mod=readonly" not in CLOUD.read_text().splitlines():
-            raise ValueError("cloudflared must use its authoritative go.mod/go.sum")
     return result
 
 

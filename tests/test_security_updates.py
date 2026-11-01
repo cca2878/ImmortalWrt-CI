@@ -24,62 +24,45 @@ class BackportTests(unittest.TestCase):
         self.addCleanup(os.chdir, self.previous)
         security.CA.parent.mkdir(parents=True)
         shutil.copyfile(FIXTURES / "ca.Makefile", security.CA)
+        for path in security.SOURCE_UPDATES:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(FIXTURES / f"{path.parent.name}.Makefile", path)
 
     def feed(self, minor):
         target = security.GOLANG / f"golang{minor}/Makefile"
         target.parent.mkdir(parents=True)
         shutil.copyfile(FIXTURES / f"golang{minor}.Makefile", target)
 
-    def test_x86_backports_are_idempotent_and_cloudflared_selects_go127(self):
-        self.feed("1.26")
-        security.CLOUD.parent.mkdir(parents=True)
-        shutil.copyfile(FIXTURES / "cloudflared.Makefile", security.CLOUD)
+    def test_ap_backports_are_idempotent_and_keep_feed_pins(self):
+        self.feed("1.27")
         for _ in range(2):
             security.apply_source()
-            security.apply_feeds("x86_jp_skylake")
-            result = security.verify("x86_jp_skylake")
-            self.assertEqual(len(result["packages"]), 4)
-            self.assertIn("GO_MOD_ARGS+=-mod=readonly", security.CLOUD.read_text().splitlines())
+            security.apply_feeds("re_cs_02_ap")
+            self.assertEqual(len(security.verify("re_cs_02_ap")["packages"]), 5)
         before = {p: p.read_bytes() for p in Path(".").rglob("Makefile")}
         security.apply_source()
-        security.apply_feeds("x86_jp_skylake")
-        self.assertEqual(before, {p: p.read_bytes() for p in before})
-
-    def test_ap_keeps_feed_pins_and_does_not_add_cloudflared(self):
-        self.feed("1.27")
-        security.apply_source()
         security.apply_feeds("re_cs_02_ap")
-        self.assertEqual(len(security.verify("re_cs_02_ap")["packages"]), 2)
-        self.assertFalse(security.CLOUD.exists())
+        self.assertEqual(before, {p: p.read_bytes() for p in before})
         self.assertFalse((security.GOLANG / "golang1.26").exists())
         config = yaml.safe_load((ROOT / "Configs/re_cs_02_ap.yml").read_text())
         self.assertIn("^8d50d4ea3f11eef6f8fcc889cd35ba6fcb530481", config["hooks"]["before_feeds_update"])
 
-    def test_x86_hook_updates_existing_go1271_host_recipe(self):
-        self.feed("1.26")
+    def test_x86_uses_upstream_without_security_overlay(self):
+        config = yaml.safe_load((ROOT / "Configs/x86_jp_skylake.yml").read_text())
+        self.assertEqual(config["hooks"]["after_clone"], "")
+        self.assertEqual(config["hooks"]["after_feeds_update"], "")
+        self.assertNotIn("security_updates.py", config["hooks"]["before_compile"])
+        self.assertNotIn("x86_jp_skylake", security.PROFILES)
+        self.assertFalse((ROOT / "Configs/security/golang1.27/Makefile").exists())
+
+    def test_rpcd_update_requires_reviewed_ubus_source(self):
         self.feed("1.27")
-        target = security.GOLANG / "golang1.27/Makefile"
-        # immortalwrt/packages d200499b31751dc5c72905f37a747712f009f155:
-        # the feed used by the failed x86 build already contains Go 1.27.1.
-        shutil.copyfile(FIXTURES / "golang1.27-25.12.Makefile", target)
-        security.CLOUD.parent.mkdir(parents=True)
-        shutil.copyfile(FIXTURES / "cloudflared.Makefile", security.CLOUD)
         security.apply_source()
-        script = subprocess.check_output([
-            "python3", str(ROOT / "Configs/wrt_cfg.py"), "hook",
-            str(ROOT / "Configs/x86_jp_skylake.yml"), "after_feeds_update",
-        ], text=True)
-        env = dict(os.environ, WRT_CONF="x86_jp_skylake", PATH_WORKDIR=str(ROOT.parent), PATH_CI=ROOT.name)
-        for _ in range(2):
-            subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], env=env, check=True, capture_output=True)
-            result = security.verify("x86_jp_skylake")
-            self.assertEqual(len(result["packages"]), 4)
-            self.assertEqual(security.value(target.read_text(), "GO_VERSION_PATCH"), "3")
-            self.assertEqual(security.value(target.read_text(), "PKG_HOST_ONLY"), "1")
-        original = (FIXTURES / "golang1.27-25.12.Makefile").read_text()
-        expected = original.replace("GO_VERSION_PATCH:=1", "GO_VERSION_PATCH:=3").replace(
-            security.value(original, "PKG_HASH"), security.GO["1.27"][2])
-        self.assertEqual(target.read_text(), expected)
+        security.apply_feeds("re_cs_02_ap")
+        path = Path("package/system/ubus/Makefile")
+        path.write_text(security.replace(path.read_text(), "PKG_SOURCE_VERSION", "414c60a2e29e72c2c4f573bc50ad54aef076d169"))
+        with self.assertRaises(ValueError):
+            security.verify("re_cs_02_ap")
 
     def test_unknown_go_patch_is_rejected_without_overwriting(self):
         self.feed("1.27")
@@ -134,7 +117,7 @@ class BackportTests(unittest.TestCase):
         steps = workflow["jobs"]["core"]["steps"]
         generator = next(s["run"] for s in steps if s["name"] == "Generate Cache Key")
         cache = next(s["with"] for s in steps if s["name"] == "Check Caches")
-        self.assertIn('CACHE_SCOPE="${CACHE_SCOPE}-security-${SECURITY_HASH}"', generator)
+        self.assertIn('CACHE_SCOPE="${CACHE_SCOPE}-profile-v2-${PROFILE_HASH}"', generator)
         for prefix in cache["restore-keys"].splitlines():
             self.assertIn("env.CACHE_SCOPE", prefix)
         # Execute the real key-generation shell with the workflow's paths.
@@ -142,8 +125,8 @@ class BackportTests(unittest.TestCase):
         env["GITHUB_ENV"] = str(Path(self.temp.name) / "env")
         subprocess.run(["bash", "-e", "-o", "pipefail", "-c", generator], env=env, check=True, capture_output=True)
         values = Path(env["GITHUB_ENV"]).read_text()
-        self.assertIn("CACHE_SCOPE=upstream-x86_jp_skylake-security-", values)
-        self.assertIn("CACHE_KEY=upstream-x86_jp_skylake-security-", values)
+        self.assertIn("CACHE_SCOPE=upstream-x86_jp_skylake-profile-v2-", values)
+        self.assertIn("CACHE_KEY=upstream-x86_jp_skylake-profile-v2-", values)
 
 
 if __name__ == "__main__":
